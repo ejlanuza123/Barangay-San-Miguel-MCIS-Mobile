@@ -27,6 +27,23 @@ export const migrateDatabase = async () => {
       
       await db.execAsync(`ALTER TABLE child_records ADD COLUMN ${column} ${columnType}`);
     }
+
+    const patientColumns = await db.getAllAsync(`PRAGMA table_info(patients)`);
+    const existingPatientColumns = patientColumns.map(col => col.name);
+
+    console.log('Existing patients columns:', existingPatientColumns);
+
+    const missingPatientColumns = [
+      'middle_name', 'purok', 'street', 'is_synced'
+    ].filter(col => !existingPatientColumns.includes(col));
+    
+    for (const column of missingPatientColumns) {
+      console.log(`Adding missing column: ${column} to patients`);
+      let columnType = 'TEXT';
+      if (column === 'is_synced') columnType = 'INTEGER';
+      
+      await db.execAsync(`ALTER TABLE patients ADD COLUMN ${column} ${columnType}`);
+    }
     
     // Check and update column types if needed
     const columnTypes = await db.getAllAsync(`PRAGMA table_info(child_records)`);
@@ -89,7 +106,8 @@ export const initDatabase = async () => {
       CREATE TABLE IF NOT EXISTS patients (
         id TEXT PRIMARY KEY, 
         patient_id TEXT UNIQUE, 
-        first_name TEXT, 
+        first_name TEXT,
+        middle_name TEXT, 
         last_name TEXT, 
         age INTEGER, 
         risk_level TEXT DEFAULT 'NORMAL',

@@ -260,24 +260,10 @@ export default function AddPatientModal({ onClose, onSave, mode = 'add', initial
                 } catch (authError) {
                     console.log('Auth failed, continuing without user_id:', authError);
                 }
-                
-                // If online and have a TEMP ID, generate a proper P-000 ID
-                if (patientId.startsWith('TEMP-')) {
-                    try {
-                        const { count, error } = await supabase
-                            .from('patients')
-                            .select('*', { count: 'exact', head: true });
-                        if (!error) {
-                            finalPatientId = `P-${String((count || 0) + 1).padStart(3, '0')}`;
-                        }
-                    } catch (error) {
-                        console.log('Supabase count failed, using local ID:', error);
-                    }
-                }
             }
 
             // Use the selected risk level from the form instead of calculating
-            const riskLevel = formData.risk_level || 'NORMAL'; // Default to NORMAL if not selected
+            const riskLevel = formData.risk_level || 'NORMAL';
 
             // Separate the main table data from the medical history JSON
             const patientRecord = {
@@ -290,60 +276,111 @@ export default function AddPatientModal({ onClose, onSave, mode = 'add', initial
                 purok: purok,
                 street: street,
                 risk_level: riskLevel,
-                user_id: user_id, // Will be null when offline
+                user_id: user_id,
                 medical_history: formData
             };
 
             if (netInfo.isConnected) {
-                console.log("Online: Saving patient directly to Supabase...");
-                const { error } = await supabase.from('patients').insert([patientRecord]);
-                if (error) throw error;
-                addNotification('Patient record saved successfully.', 'success');
+                console.log("Online: " + (mode === 'edit' ? 'Updating' : 'Saving') + " patient...");
+                
+                if (mode === 'edit') {
+                    // EDIT MODE: Update existing patient
+                    const { error } = await supabase
+                        .from('patients')
+                        .update(patientRecord)
+                        .eq('patient_id', patientId); // Use the original patient_id
+                    
+                    if (error) throw error;
+                    addNotification('Patient record updated successfully.', 'success');
+                } else {
+                    // ADD MODE: Create new patient
+                    const { error } = await supabase.from('patients').insert([patientRecord]);
+                    if (error) throw error;
+                    addNotification('Patient record saved successfully.', 'success');
+                    try {
+                        await logActivity(
+                            mode === 'edit' ? 'Patient Updated' : 'New Patient Added', 
+                            `Patient: ${formData.first_name} ${formData.last_name}`
+                        );
+                    } catch (logError) {
+                        console.log('Activity logging failed:', logError);
+                    }
+                }
 
             } else {
-                console.log("Offline: Saving patient locally...");
-                await db.withTransactionAsync(async () => {
-                    // Insert into local patients table
-                    const statement = await db.prepareAsync(
-                        'INSERT INTO patients (patient_id, first_name, last_name, age, contact_no, purok, street, risk_level, medical_history, is_synced) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);'
-                    );
-                    await statement.executeAsync([
-                        patientRecord.patient_id,
-                        patientRecord.first_name,
-                        patientRecord.last_name,
-                        patientRecord.age,
-                        patientRecord.contact_no,
-                        patientRecord.purok,
-                        patientRecord.street,
-                        patientRecord.risk_level,
-                        JSON.stringify(patientRecord.medical_history),
-                        0 // is_synced = false for offline records
-                    ]);
-                    await statement.finalizeAsync();
+                console.log("Offline: " + (mode === 'edit' ? 'Updating' : 'Saving') + " patient locally...");
+                
+                if (mode === 'edit') {
+                    // EDIT MODE: Update local patient
+                    await db.withTransactionAsync(async () => {
+                        const statement = await db.prepareAsync(
+                            'UPDATE patients SET first_name = ?, last_name = ?, middle_name = ?, age = ?, contact_no = ?, purok = ?, street = ?, risk_level = ?, medical_history = ?, is_synced = ? WHERE patient_id = ?;'
+                        );
+                        await statement.executeAsync([
+                            patientRecord.first_name,
+                            patientRecord.last_name,
+                            patientRecord.middle_name,
+                            patientRecord.age,
+                            patientRecord.contact_no,
+                            patientRecord.purok,
+                            patientRecord.street,
+                            patientRecord.risk_level,
+                            JSON.stringify(patientRecord.medical_history),
+                            0, 
+                            patientRecord.patient_id
+                        ]);
+                        await statement.finalizeAsync();
 
-                    // Add to sync queue for later
-                    const syncStatement = await db.prepareAsync(
-                        'INSERT INTO sync_queue (action, table_name, payload) VALUES (?, ?, ?);'
-                    );
-                    await syncStatement.executeAsync(['create', 'patients', JSON.stringify(patientRecord)]);
-                    await syncStatement.finalizeAsync();
-                });
-                addNotification('Patient saved locally. Will sync when online.', 'success');
+                        // Add UPDATE action to sync queue
+                        const syncStatement = await db.prepareAsync(
+                            'INSERT INTO sync_queue (action, table_name, payload) VALUES (?, ?, ?);'
+                        );
+                        await syncStatement.executeAsync([
+                            'update', 
+                            'patients', 
+                            JSON.stringify({
+                                ...patientRecord,
+                                id: initialData.id // Include the Supabase ID for updates
+                            })
+                        ]);
+                        await syncStatement.finalizeAsync();
+                    });
+                    addNotification('Patient updated locally. Will sync when online.', 'success');
+                } else {
+                    // ADD MODE: Create new local patient
+                    await db.withTransactionAsync(async () => {
+                        const statement = await db.prepareAsync(
+                            'INSERT INTO patients (patient_id, first_name, last_name, age, contact_no, purok, street, risk_level, medical_history, is_synced) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);'
+                        );
+                        await statement.executeAsync([
+                            patientRecord.patient_id,
+                            patientRecord.first_name,
+                            patientRecord.last_name,
+                            patientRecord.age,
+                            patientRecord.contact_no,
+                            patientRecord.purok,
+                            patientRecord.street,
+                            patientRecord.risk_level,
+                            JSON.stringify(patientRecord.medical_history),
+                            0
+                        ]);
+                        await statement.finalizeAsync();
+
+                        // Add CREATE action to sync queue
+                        const syncStatement = await db.prepareAsync(
+                            'INSERT INTO sync_queue (action, table_name, payload) VALUES (?, ?, ?);'
+                        );
+                        await syncStatement.executeAsync(['create', 'patients', JSON.stringify(patientRecord)]);
+                        await syncStatement.finalizeAsync();
+                    });
+                    addNotification('Patient saved locally. Will sync when online.', 'success');
+                }
             }
-
-            // Log activity - make it offline safe
-            try {
-                await logActivity('New Patient Added', `Patient: ${formData.first_name} ${formData.last_name}`);
-            } catch (logError) {
-                console.log('Activity logging failed:', logError);
-                // Don't fail the entire save if logging fails
-            }
-
-            onSave(); // This will trigger a re-fetch on the main screen
+            onSave();
             onClose();
 
         } catch (error) {
-            console.error("Failed to save patient:", error);
+            console.error("Failed to " + (mode === 'edit' ? 'update' : 'save') + " patient:", error);
             addNotification(`Error: ${error.message}`, 'error');
         } finally {
             setLoading(false);

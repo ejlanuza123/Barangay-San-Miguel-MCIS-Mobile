@@ -24,12 +24,36 @@ const Checkbox = ({ label, value, onValueChange }) => (
         <Text style={styles.checkboxLabel}>{label}</Text>
     </TouchableOpacity>
 );
-const InputField = ({ label, value, onChangeText, ...props }) => (
+const InputField = ({ label, value, onChangeText, ...props }) => {
+  // ULTRA-DEFENSIVE value handling
+  const getSafeValue = (val) => {
+    if (val === null || val === undefined || val === 'null' || val === 'undefined') {
+      return '';
+    }
+    
+    try {
+      // Try to convert to string, but catch any errors
+      return String(val);
+    } catch (error) {
+      console.error('Error converting value to string:', error, 'value:', val);
+      return '';
+    }
+  };
+
+  const safeValue = getSafeValue(value);
+  
+  return (
     <View>
-        <Text style={styles.label}>{label}</Text>
-        <TextInput style={styles.input} value={value} onChangeText={onChangeText} {...props} />
+      <Text style={styles.label}>{label}</Text>
+      <TextInput 
+        style={styles.input} 
+        value={safeValue}
+        onChangeText={onChangeText} 
+        {...props} 
+      />
     </View>
-);
+  );
+};
 
 // --- FORM STEP COMPONENTS ---
 const Step1 = ({ formData, handleChange, setIsCalendarOpen }) => (
@@ -92,52 +116,90 @@ export default function AddChildModal({ onClose, onSave, mode = 'add', initialDa
     const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
     useEffect(() => {
-        if (mode === 'edit' && initialData) {
-            // Edit mode logic remains the same
-            setChildId(initialData.child_id);
-            setFormData(typeof initialData.health_details === 'string' 
-                ? JSON.parse(initialData.health_details) 
-                : initialData.health_details || {}
-            );
-        } else {
-            // Add mode logic now checks the network
-            const generateId = async () => {
-                setChildId('Loading...');
-                const netInfo = await NetInfo.fetch();
-                const db = getDatabase();
-
-                if (netInfo.isConnected) {
-                    // ONLINE: Get the count from Supabase for a sequential ID
-                    const { count, error } = await supabase
-                        .from('child_records')
-                        .select('*', { count: 'exact', head: true });
-
-                    if (error) {
-                        // Fallback to local count if Supabase fails
-                        const localChildren = await db.getAllAsync('SELECT * FROM child_records WHERE child_id LIKE "C-%"');
-                        const newId = `C-${String((localChildren.length || 0) + 1).padStart(3, '0')}`;
-                        setChildId(newId);
-                    } else {
-                        const newId = `C-${String((count || 0) + 1).padStart(3, '0')}`;
-                        setChildId(newId);
-                    }
-                } else {
-                    // OFFLINE: Get count from local database for C-000 format
-                    try {
-                        const localChildren = await db.getAllAsync('SELECT * FROM child_records WHERE child_id LIKE "C-%"');
-                        const newId = `C-${String(localChildren.length + 1).padStart(3, '0')}`;
-                        setChildId(newId);
-                    } catch (error) {
-                        console.error('Error counting local children:', error);
-                        // Only use TEMP as last resort
-                        const uniqueId = `TEMP-C-${Crypto.randomUUID()}`;
-                        setChildId(uniqueId);
-                    }
+            if (mode === 'edit' && initialData) {
+                console.log('[DEBUG] Edit mode - initialData:', initialData);
+                
+                setChildId(initialData.child_id || '');
+                
+                let healthDetails = {};
+                try {
+                if (initialData.health_details) {
+                    console.log('[DEBUG] health_details raw:', initialData.health_details);
+                    healthDetails = typeof initialData.health_details === 'string' 
+                    ? JSON.parse(initialData.health_details) 
+                    : initialData.health_details;
+                    console.log('[DEBUG] health_details parsed:', healthDetails);
                 }
-            };
-            generateId();
-        }
-    }, [mode, initialData]);
+                } catch (error) {
+                console.error('Error parsing health_details:', error);
+                // If parsing fails, start with empty object
+                healthDetails = {};
+                }
+                
+                // COMPREHENSIVE NULL HANDLING
+                const sanitizedData = {};
+                
+                // Handle the case where healthDetails might be null/undefined
+                if (healthDetails && typeof healthDetails === 'object') {
+                Object.keys(healthDetails).forEach(key => {
+                    let value = healthDetails[key];
+                    
+                    // Convert ALL problematic values to empty string
+                    if (value === null || 
+                        value === undefined || 
+                        value === 'null' || 
+                        value === 'undefined' ||
+                        (typeof value === 'number' && isNaN(value)) ||
+                        (typeof value === 'object' && Object.keys(value).length === 0)) {
+                    sanitizedData[key] = '';
+                    } else {
+                    sanitizedData[key] = value;
+                    }
+                });
+                }
+                
+                console.log('[DEBUG] Final sanitizedData:', sanitizedData);
+                setFormData(sanitizedData);
+            
+            } else {
+                // Add mode logic remains the same...
+                const generateId = async () => {
+                    setChildId('Loading...');
+                    const netInfo = await NetInfo.fetch();
+                    const db = getDatabase();
+
+                    if (netInfo.isConnected) {
+                        // ONLINE: Get the count from Supabase for a sequential ID
+                        const { count, error } = await supabase
+                            .from('child_records')
+                            .select('*', { count: 'exact', head: true });
+
+                        if (error) {
+                            // Fallback to local count if Supabase fails
+                            const localChildren = await db.getAllAsync('SELECT * FROM child_records WHERE child_id LIKE "C-%"');
+                            const newId = `C-${String((localChildren.length || 0) + 1).padStart(3, '0')}`;
+                            setChildId(newId);
+                        } else {
+                            const newId = `C-${String((count || 0) + 1).padStart(3, '0')}`;
+                            setChildId(newId);
+                        }
+                    } else {
+                        // OFFLINE: Get count from local database for C-000 format
+                        try {
+                            const localChildren = await db.getAllAsync('SELECT * FROM child_records WHERE child_id LIKE "C-%"');
+                            const newId = `C-${String(localChildren.length + 1).padStart(3, '0')}`;
+                            setChildId(newId);
+                        } catch (error) {
+                            console.error('Error counting local children:', error);
+                            // Only use TEMP as last resort
+                            const uniqueId = `TEMP-C-${Crypto.randomUUID()}`;
+                            setChildId(uniqueId);
+                        }
+                    }
+                };
+                generateId();
+            }
+        }, [mode, initialData]);
 
     const handleChange = (name, value) => setFormData(prev => ({ ...prev, [name]: value }));
 
@@ -155,31 +217,6 @@ export default function AddChildModal({ onClose, onSave, mode = 'add', initialDa
             const [firstName, ...lastNameParts] = formData.child_name.split(' ');
             
             let finalChildId = childId;
-            
-            // Only try to get user if online
-            let user_id = null;
-            if (netInfo.isConnected) {
-                try {
-                    const { data: { user } } = await supabase.auth.getUser();
-                    user_id = user?.id;
-                } catch (authError) {
-                    console.log('Auth failed, continuing without user_id:', authError);
-                }
-                
-                // If online and have a TEMP ID, generate a proper C-000 ID
-                if (childId.startsWith('TEMP-C-')) {
-                    try {
-                        const { count, error } = await supabase
-                            .from('child_records')
-                            .select('*', { count: 'exact', head: true });
-                        if (!error) {
-                            finalChildId = `C-${String((count || 0) + 1).padStart(3, '0')}`;
-                        }
-                    } catch (error) {
-                        console.log('Supabase count failed, using local ID:', error);
-                    }
-                }
-            }
 
             // Calculate BMI if we have weight and height
             const weight = formData.weight_kg ? parseFloat(formData.weight_kg) : null;
@@ -211,29 +248,177 @@ export default function AddChildModal({ onClose, onSave, mode = 'add', initialDa
 
             if (netInfo.isConnected) {
                 // --- ONLINE LOGIC ---
-                console.log("Online: Saving child record directly to Supabase...");
-                try {
-                    const { error } = await supabase.from('child_records').insert([childRecord]);
-                    if (error) throw error;
-                    addNotification('New child record added successfully.', 'success');
+                console.log(`Online: ${mode === 'edit' ? 'Updating' : 'Saving'} child record...`);
+                
+                if (mode === 'edit') {
+                    // EDIT MODE: Update existing child record
                     try {
-                            await logActivity('Add Child', `ID: ${finalChildId}`);
+                        const { error } = await supabase
+                            .from('child_records')
+                            .update(childRecord)
+                            .eq('child_id', childId);
+                        
+                        if (error) throw error;
+                        addNotification('Child record updated successfully.', 'success');
+                    } catch (onlineError) {
+                        console.error("Online update failed, falling back to offline:", onlineError);
+                        
+                        // Fallback to offline update
+                        await db.withTransactionAsync(async () => {
+                            const statement = await db.prepareAsync(
+                                `UPDATE child_records SET 
+                                    first_name = ?, last_name = ?, dob = ?, sex = ?, place_of_birth = ?,
+                                    mother_name = ?, father_name = ?, guardian_name = ?, nhts_no = ?, philhealth_no = ?,
+                                    weight_kg = ?, height_cm = ?, bmi = ?, nutrition_status = ?, health_details = ?
+                                WHERE child_id = ?;`
+                            );
+                            await statement.executeAsync([
+                                childRecord.first_name, 
+                                childRecord.last_name, 
+                                childRecord.dob,
+                                childRecord.sex,
+                                childRecord.place_of_birth,
+                                childRecord.mother_name,
+                                childRecord.father_name,
+                                childRecord.guardian_name,
+                                childRecord.nhts_no,
+                                childRecord.philhealth_no,
+                                childRecord.weight_kg,
+                                childRecord.height_cm,
+                                childRecord.bmi,
+                                childRecord.nutrition_status,
+                                JSON.stringify(childRecord.health_details),
+                                childRecord.child_id
+                            ]);
+                            await statement.finalizeAsync();
+
+                            const syncStatement = await db.prepareAsync(
+                                'INSERT INTO sync_queue (action, table_name, payload) VALUES (?, ?, ?);'
+                            );
+                            await syncStatement.executeAsync([
+                                'update', 
+                                'child_records', 
+                                JSON.stringify({
+                                    ...childRecord,
+                                    id: initialData?.id
+                                })
+                            ]);
+                            await syncStatement.finalizeAsync();
+                        });
+                        addNotification('Child record updated locally. Will sync when online.', 'success');
+                    }
+                } else {
+                    // ADD MODE: Create new child record
+                    try {
+                        const { error } = await supabase.from('child_records').insert([childRecord]);
+                        if (error) throw error;
+                        addNotification('New child record added successfully.', 'success');
+                        
+                        try {
+                            await logActivity(
+                                mode === 'edit' ? 'Update Child' : 'Add Child', 
+                                `ID: ${finalChildId}`
+                            );
                         } catch (logError) {
-                            console.log('Activity logging failed:', logError);
-                            // Don't fail the entire save if logging fails
+                            console.log('Activity logging failed:', logError);
                         }
-                } catch (onlineError) {
-                    console.error("Online save failed, falling back to offline:", onlineError);
-                    
-                    // If online save fails, fall back to offline mode
-                    console.log("Falling back to offline save...");
-                    await db.withTransactionAsync(async () => {
+
+                    } catch (onlineError) {
+                        console.error("Online save failed, falling back to offline:", onlineError);
+                        
+                        // Fallback to offline save
+                        await db.withTransactionAsync(async () => {
+                            const statement = await db.prepareAsync(
+                                `INSERT INTO child_records (
+                                    child_id, first_name, last_name, dob, sex, place_of_birth, 
+                                    mother_name, father_name, guardian_name, nhts_no, philhealth_no,
+                                    weight_kg, height_cm, bmi, nutrition_status, health_details
+                                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
+                            );
+                            await statement.executeAsync([
+                                childRecord.child_id, 
+                                childRecord.first_name, 
+                                childRecord.last_name, 
+                                childRecord.dob,
+                                childRecord.sex,
+                                childRecord.place_of_birth,
+                                childRecord.mother_name,
+                                childRecord.father_name,
+                                childRecord.guardian_name,
+                                childRecord.nhts_no,
+                                childRecord.philhealth_no,
+                                childRecord.weight_kg,
+                                childRecord.height_cm,
+                                childRecord.bmi,
+                                childRecord.nutrition_status,
+                                JSON.stringify(childRecord.health_details)
+                            ]);
+                            await statement.finalizeAsync();
+
+                            const syncStatement = await db.prepareAsync(
+                                'INSERT INTO sync_queue (action, table_name, payload) VALUES (?, ?, ?);'
+                            );
+                            await syncStatement.executeAsync(['create', 'child_records', JSON.stringify(childRecord)]);
+                            await syncStatement.finalizeAsync();
+                        });
+                        addNotification('Child record saved locally. Will sync when online.', 'success');
+                    }
+                }
+
+            } else {
+                // --- OFFLINE LOGIC ---
+                console.log(`Offline: ${mode === 'edit' ? 'Updating' : 'Saving'} child record locally...`);
+                
+                await db.withTransactionAsync(async () => {
+                    if (mode === 'edit') {
+                        // UPDATE existing record
                         const statement = await db.prepareAsync(
-                        `INSERT INTO child_records (
-                            child_id, first_name, last_name, dob, sex, place_of_birth, 
-                            mother_name, father_name, guardian_name, nhts_no, philhealth_no,
-                            weight_kg, height_cm, bmi, nutrition_status, health_details
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
+                            `UPDATE child_records SET 
+                                first_name = ?, last_name = ?, dob = ?, sex = ?, place_of_birth = ?,
+                                mother_name = ?, father_name = ?, guardian_name = ?, nhts_no = ?, philhealth_no = ?,
+                                weight_kg = ?, height_cm = ?, bmi = ?, nutrition_status = ?, health_details = ?
+                            WHERE child_id = ?;`
+                        );
+                        await statement.executeAsync([
+                            childRecord.first_name, 
+                            childRecord.last_name, 
+                            childRecord.dob,
+                            childRecord.sex,
+                            childRecord.place_of_birth,
+                            childRecord.mother_name,
+                            childRecord.father_name,
+                            childRecord.guardian_name,
+                            childRecord.nhts_no,
+                            childRecord.philhealth_no,
+                            childRecord.weight_kg,
+                            childRecord.height_cm,
+                            childRecord.bmi,
+                            childRecord.nutrition_status,
+                            JSON.stringify(childRecord.health_details),
+                            childRecord.child_id
+                        ]);
+                        await statement.finalizeAsync();
+
+                        const syncStatement = await db.prepareAsync(
+                            'INSERT INTO sync_queue (action, table_name, payload) VALUES (?, ?, ?);'
+                        );
+                        await syncStatement.executeAsync([
+                            'update', 
+                            'child_records', 
+                            JSON.stringify({
+                                ...childRecord,
+                                id: initialData?.id
+                            })
+                        ]);
+                        await syncStatement.finalizeAsync();
+                    } else {
+                        // CREATE new record
+                        const statement = await db.prepareAsync(
+                            `INSERT INTO child_records (
+                                child_id, first_name, last_name, dob, sex, place_of_birth, 
+                                mother_name, father_name, guardian_name, nhts_no, philhealth_no,
+                                weight_kg, height_cm, bmi, nutrition_status, health_details
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
                         );
                         await statement.executeAsync([
                             childRecord.child_id, 
@@ -260,57 +445,16 @@ export default function AddChildModal({ onClose, onSave, mode = 'add', initialDa
                         );
                         await syncStatement.executeAsync(['create', 'child_records', JSON.stringify(childRecord)]);
                         await syncStatement.finalizeAsync();
-                    });
-                    addNotification('Child record saved locally. Will sync when online.', 'success');
-                }
-
-            } else {
-                // --- OFFLINE LOGIC ---
-                console.log("Offline: Saving child record locally...");
-                await db.withTransactionAsync(async () => {
-                    const statement = await db.prepareAsync(
-                    `INSERT INTO child_records (
-                        child_id, first_name, last_name, dob, sex, place_of_birth, 
-                        mother_name, father_name, guardian_name, nhts_no, philhealth_no,
-                        weight_kg, height_cm, bmi, nutrition_status, health_details
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
-                    );
-                    await statement.executeAsync([
-                        childRecord.child_id, 
-                        childRecord.first_name, 
-                        childRecord.last_name, 
-                        childRecord.dob,
-                        childRecord.sex,
-                        childRecord.place_of_birth,
-                        childRecord.mother_name,
-                        childRecord.father_name,
-                        childRecord.guardian_name,
-                        childRecord.nhts_no,
-                        childRecord.philhealth_no,
-                        childRecord.weight_kg,
-                        childRecord.height_cm,
-                        childRecord.bmi,
-                        childRecord.nutrition_status,
-                        JSON.stringify(childRecord.health_details)
-                    ]);
-                    await statement.finalizeAsync();
-
-                    const syncStatement = await db.prepareAsync(
-                        'INSERT INTO sync_queue (action, table_name, payload) VALUES (?, ?, ?);'
-                    );
-                    await syncStatement.executeAsync(['create', 'child_records', JSON.stringify(childRecord)]);
-                    await syncStatement.finalizeAsync();
+                    }
                 });
-                addNotification('Child record saved locally. Will sync when online.', 'success');
+                addNotification(`Child record ${mode === 'edit' ? 'updated' : 'saved'} locally. Will sync when online.`, 'success');
             }
-            
             onSave();
             onClose();
 
         } catch (error) {
-            console.error("Failed to save child record:", error);
+            console.error(`Failed to ${mode === 'edit' ? 'update' : 'save'} child record:`, error);
             
-            // More specific error messages
             if (error.message.includes('Network request failed')) {
                 addNotification('Network error. Please check your internet connection.', 'error');
             } else {
@@ -323,7 +467,6 @@ export default function AddChildModal({ onClose, onSave, mode = 'add', initialDa
 
     return (
         <>
-            {/* 👇 Add this modal */}
             <Modal
                 transparent={true}
                 visible={isCalendarOpen}

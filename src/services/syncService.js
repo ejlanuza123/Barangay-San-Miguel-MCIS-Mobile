@@ -7,71 +7,124 @@ import { supabase } from './supabase';
 const deleteFromQueue = async (id) => {
   const db = getDatabase();
   try {
-    await db.runAsync('DELETE FROM sync_queue WHERE id = ?', id);
+    // FIX: Use array for parameters
+    await db.runAsync('DELETE FROM sync_queue WHERE id = ?', [id]);
   } catch (error) {
     console.error('Failed to delete from sync queue:', error);
   }
+
 };
 
+
+
 // Add this function to show sync notifications
+
 const showSyncNotification = async (action, tableName, payload, success = true) => {
+
   const db = getDatabase();
+
+
 
   if (!success) return;
 
+
+
   let message = '';
 
+
+
   try {
-    if (tableName === 'patients' && action === 'create') {
-      const firstName = payload?.first_name?.toString() || 'Unknown';
-      const lastName = payload?.last_name?.toString() || '';
-      const patientId = payload?.patient_id?.toString() || 'Unknown ID';
-      message = `Patient ${firstName} ${lastName} (${patientId}) successfully synced to server`;
-    } else if (tableName === 'appointments' && action === 'create') {
-      const patientName = payload?.patient_name?.toString() || 'Unknown Patient';
-      const date = payload?.date?.toString() || 'Unknown Date';
-      const time = payload?.time?.toString() || '';
-      const timeDisplay = time ? ` at ${time}` : '';
-      message = `Appointment for ${patientName} on ${date}${timeDisplay} successfully synced to server`;
-    } else if (tableName === 'child_records' && action === 'create') {
-        const firstName = (payload?.first_name ?? 'Unknown').toString();
-        const lastName = (payload?.last_name ?? '').toString();
-        const childId = (payload?.child_id ?? 'Unknown ID').toString();
-      message = `Child record for ${firstName} ${lastName} (${childId}) successfully synced to server`;
-    } else {
-      message = `${tableName} ${action} operation successfully synced to server`;
+
+    console.log('[SYNC_DEBUG] showSyncNotification called:', { action, tableName });
+
+
+
+    // SIMPLE FIX: Use generic messages for ALL record types
+
+    if (tableName === 'patients') {
+
+      message = `Patient record ${action === 'create' ? 'added' : 'updated'} successfully`;
+
+    } 
+
+    else if (tableName === 'child_records') {
+
+      message = `Child record ${action === 'create' ? 'added' : 'updated'} successfully`;
+
     }
 
-    // ✅ Safety check: ensure a valid message
-    if (typeof message !== 'string' || message.trim().length === 0) {
-      message = 'Unknown sync notification'; // fallback text
+    else if (tableName === 'appointments') {
+
+      message = `Appointment ${action === 'create' ? 'scheduled' : 'updated'} successfully`;
+
     }
+
+    else {
+
+      message = `${tableName} ${action} operation completed successfully`;
+
+    }
+
+
+
+    console.log('[SYNC_DEBUG] Storing notification:', message);
+
+    
 
     await db.runAsync(
-      `INSERT INTO sync_notifications (message, type, created_at) VALUES (?, ?, datetime('now'))`,
-      message.trim(),
-      'success'
-    );
 
-    console.log('Sync notification stored:', message);
+      `INSERT INTO sync_notifications (message, type, created_at) VALUES (?, ?, datetime('now'))`,
+
+      [message, 'success']
+
+    );
+
+
+
   } catch (error) {
-    console.error('Failed to store sync notification:', error, message);
+
+    console.error('[SYNC_DEBUG] CRITICAL: Failed to store notification:', error);
+
+    // ABSOLUTELY DO NOT THROW - we don't want to break sync
+
   }
+
 };
 
-export const syncOfflineData = async () => {
-    const state = await NetInfo.fetch();
-    if (!state.isConnected) {
-        console.log("App is offline. Skipping sync.");
-        return;
+const safeLog = (message, data) => {
+    try {
+        if (data === null || data === undefined) {
+            console.log(message, 'null/undefined');
+            return;
+        }
+        // Convert to JSON string to avoid toString issues
+        console.log(message, JSON.stringify(data, null, 2));
+    } catch (e) {
+        console.log(message, '[logging error]');
     }
+};
 
-    console.log("App is online. Starting sync process...");
-    
-    const db = getDatabase();
+
+
+export const syncOfflineData = async () => {
+    console.log('[SYNC] Step 1: Starting sync');
     
     try {
+        const state = await NetInfo.fetch();
+        console.log('[SYNC] Step 2: Network state fetched');
+        
+        if (!state.isConnected) {
+            console.log("App is offline. Skipping sync.");
+            return;
+        }
+
+        console.log("App is online. Starting sync process...");
+        
+        const db = getDatabase();
+        console.log('[SYNC] Step 3: Database obtained');
+        
         const queue = await db.getAllAsync('SELECT * FROM sync_queue ORDER BY id ASC;');
+        console.log('[SYNC] Step 4: Queue fetched, length:', queue?.length || 0);
 
         if (queue.length === 0) {
             console.log("Sync queue is empty.");
@@ -82,50 +135,80 @@ export const syncOfflineData = async () => {
 
         let syncedCount = 0;
 
-        for (const item of queue) {
+        for (let i = 0; i < queue.length; i++) {
+            const item = queue[i];
+            console.log(`[SYNC] Step 5.${i}: Processing item index ${i}`);
+            
             try {
-                const payload = JSON.parse(item.payload);
+                console.log('[SYNC] Step 5.${i}.1: Item exists:', !!item);
+                console.log('[SYNC] Step 5.${i}.2: Item.id:', item?.id || 'undefined');
+                console.log('[SYNC] Step 5.${i}.3: Item.action:', item?.action || 'undefined');
+                console.log('[SYNC] Step 5.${i}.4: Item.table_name:', item?.table_name || 'undefined');
+                
+                // CRITICAL: Parse payload with safety
+                console.log('[SYNC] Step 5.${i}.5: About to parse payload');
+                let payload;
+                try {
+                    payload = JSON.parse(item.payload);
+                    console.log('[SYNC] Step 5.${i}.6: Payload parsed successfully');
+                } catch (parseError) {
+                    console.error('[SYNC] PARSE ERROR:', parseError?.message || 'unknown');
+                    continue;
+                }
+                
+                console.log('[SYNC] Step 5.${i}.7: Checking payload properties');
+                
                 let error = null;
                 let syncResultData = null;
 
                 if (item.action === 'create' && item.table_name === 'patients') {
-                    console.log(`Syncing new patient: ${payload.patient_id}`);
+                    console.log('[SYNC] Step 5.${i}.8: Patient create branch');
                     
                     try {
                         const { data, error: insertError } = await supabase.from('patients').insert([payload]).select();
                         syncResultData = data ? data[0] : null;
                         error = insertError;
+                        console.log('[SYNC] Step 5.${i}.9: Patient insert complete');
                     } catch (networkError) {
-                        console.error('Network error during patient sync:', networkError);
+                        console.error('[SYNC] Network error during patient sync');
+                        error = networkError;
+                        continue;
+                    }
+
+                } else if (item.action === 'update' && item.table_name === 'patients') {
+                    console.log('[SYNC] Step 5.${i}.10: Patient update branch');
+                    
+                    try {
+                        const { error: updateError } = await supabase
+                            .from('patients')
+                            .update(payload)
+                            .eq('patient_id', payload.patient_id);
+                        
+                        error = updateError;
+                        console.log('[SYNC] Step 5.${i}.11: Patient update complete');
+                    } catch (networkError) {
+                        console.error('[SYNC] Network error during patient update');
                         error = networkError;
                         continue;
                     }
 
                 } else if (item.action === 'create' && item.table_name === 'appointments') {
-                    console.log(`Syncing new appointment: ${payload.patient_name}`);
+                    console.log('[SYNC] Step 5.${i}.12: Appointment create branch');
                     
-                    // Create a clean payload for appointments
                     const syncPayload = { ...payload };
+                    console.log('[SYNC] Step 5.${i}.13: Payload copied');
                     
-                    // Remove created_by if it's null/undefined to avoid schema issues
-                    if (!syncPayload.created_by || syncPayload.created_by === null || syncPayload.created_by === undefined) {
+                    if (!syncPayload.created_by) {
                         delete syncPayload.created_by;
+                        console.log('[SYNC] Step 5.${i}.14: created_by removed');
                     }
                     
-                    // Remove patient_id if it's null/undefined (since it's a foreign key)
-                    if (!syncPayload.patient_id || syncPayload.patient_id === null || syncPayload.patient_id === undefined) {
+                    if (!syncPayload.patient_id) {
                         delete syncPayload.patient_id;
+                        console.log('[SYNC] Step 5.${i}.15: patient_id removed');
                     }
                     
-                    // Ensure date fields are properly formatted
-                    if (syncPayload.date) {
-                        syncPayload.date = syncPayload.date.toString();
-                    }
-                    if (syncPayload.time) {
-                        syncPayload.time = syncPayload.time.toString();
-                    }
-                    
-                    console.log('Syncing appointment payload:', syncPayload);
+                    console.log('[SYNC] Step 5.${i}.16: About to insert appointment');
                     
                     try {
                         const { data, error: insertError } = await supabase
@@ -135,29 +218,27 @@ export const syncOfflineData = async () => {
                         
                         syncResultData = data ? data[0] : null;
                         error = insertError;
+                        console.log('[SYNC] Step 5.${i}.17: Appointment insert complete');
                     } catch (networkError) {
-                        console.error('Network error during appointment sync:', networkError);
+                        console.error('[SYNC] Network error during appointment sync');
                         error = networkError;
                         continue;
                     }
 
                 } else if (item.action === 'create' && item.table_name === 'child_records') {
-                    console.log(`Syncing new child record: ${payload.child_id}`);
+                    console.log('[SYNC] Step 5.${i}.18: Child record create branch');
                     
-                    // Create a clean payload with safe data handling
                     const syncPayload = { ...payload };
                     
-                    // Remove user_id entirely if it's null/undefined to avoid schema cache error
-                    if (!syncPayload.user_id || syncPayload.user_id === null || syncPayload.user_id === undefined) {
+                    if (!syncPayload.user_id) {
                         delete syncPayload.user_id;
                     }
                     
-                    // Ensure numeric fields are properly typed with null safety
                     syncPayload.weight_kg = syncPayload.weight_kg ? parseFloat(syncPayload.weight_kg) : null;
                     syncPayload.height_cm = syncPayload.height_cm ? parseFloat(syncPayload.height_cm) : null;
                     syncPayload.bmi = syncPayload.bmi ? parseFloat(syncPayload.bmi) : null;
                     
-                    console.log('Syncing child record payload:', syncPayload);
+                    console.log('[SYNC] Step 5.${i}.19: About to insert child record');
                     
                     try {
                         const { data, error: insertError } = await supabase
@@ -167,131 +248,152 @@ export const syncOfflineData = async () => {
                         
                         syncResultData = data ? data[0] : null;
                         error = insertError;
+                        console.log('[SYNC] Step 5.${i}.20: Child record insert complete');
                     } catch (networkError) {
-                        console.error('Network error during child record sync:', networkError);
+                        console.error('[SYNC] Network error during child record sync');
                         error = networkError;
                         continue;
                     }
 
+                } else if (item.action === 'update' && item.table_name === 'child_records') {
+                    console.log('[SYNC] Step 5.${i}.21: Child record update branch');
+                    
+                    try {
+                        // Ensure payload has required fields and handle null values
+                        const updatePayload = { ...payload };
+                        
+                        const { error: updateError } = await supabase
+                            .from('child_records')
+                            .update(updatePayload)
+                            .eq('child_id', payload.child_id);
+                        
+                        error = updateError;
+                        console.log('[SYNC] Step 5.${i}.22: Child record update complete');
+                    } catch (networkError) {
+                        console.error('[SYNC] Network error during child record update');
+                        error = networkError;
+                        continue;
+                    }
                 } else if (item.action === 'create') {
+                    console.log('[SYNC] Step 5.${i}.23: Generic create branch');
                     try {
                         const { data, error: insertError } = await supabase.from(item.table_name).insert([payload]).select();
                         syncResultData = data ? data[0] : null;
                         error = insertError;
+                        console.log('[SYNC] Step 5.${i}.24: Generic insert complete');
                     } catch (networkError) {
-                        console.error(`Network error during ${item.table_name} sync:`, networkError);
+                        console.error('[SYNC] Network error during generic sync');
                         error = networkError;
                         continue;
                     }
 
                 } else if (item.action === 'update') {
+                    console.log('[SYNC] Step 5.${i}.25: Generic update branch');
                     const { id, ...updateData } = payload; 
                     if (!id) {
-                        console.error('Update payload is missing an ID:', payload);
+                        console.error('[SYNC] Update payload is missing an ID');
                         continue;
                     }
                     try {
                         const { error: updateError } = await supabase.from(item.table_name).update(updateData).eq('id', id);
                         error = updateError;
+                        console.log('[SYNC] Step 5.${i}.26: Generic update complete');
                     } catch (networkError) {
-                        console.error(`Network error during ${item.table_name} update:`, networkError);
+                        console.error('[SYNC] Network error during generic update');
                         error = networkError;
                         continue;
                     }
                 }
 
+                console.log('[SYNC] Step 5.${i}.27: Checking error status');
+
                 if (!error) {
-                    // Update local DB after sync
-                    if (item.table_name === 'patients' && payload.patient_id?.startsWith('P-')) {
-                        // Update with final patient_id from server if different
-                        if (syncResultData && syncResultData.patient_id !== payload.patient_id) {
-                            await db.runAsync('UPDATE patients SET patient_id = ? WHERE patient_id = ?;', 
-                                syncResultData.patient_id,
-                                payload.patient_id
-                            );
-                        }
-                        await db.runAsync('UPDATE patients SET is_synced = 1 WHERE patient_id = ?;', 
-                            (syncResultData?.patient_id || payload.patient_id) 
-                        );
-                    } else if (item.table_name === 'child_records' && syncResultData) {
-                        // Update child_records with server-generated ID if needed
-                        if (syncResultData.id !== payload.id) {
-                            await db.runAsync('UPDATE child_records SET id = ? WHERE child_id = ?;', 
-                                syncResultData.id,
-                                payload.child_id
-                            );
-                        }
-                    } else if (item.table_name === 'appointments' && syncResultData) {
-                        // Update appointments with server-generated ID if needed
-                        if (syncResultData.id !== payload.id) {
-                            await db.runAsync('UPDATE appointments SET id = ? WHERE patient_display_id = ? AND date = ?;', 
-                                syncResultData.id, 
-                                payload.patient_display_id, 
-                                payload.date
-                            );
-                        }
-                    }
+                    console.log('[SYNC] Step 5.${i}.28: No error, proceeding with cleanup');
                     
                     await deleteFromQueue(item.id);
-                    syncedCount++;
+                    console.log('[SYNC] Step 5.${i}.29: Deleted from queue');
                     
-                    // Show sync success notification with error handling
+                    syncedCount++;
+                    console.log('[SYNC] Step 5.${i}.30: About to show notification');
+                    
                     try {
-                        await showSyncNotification(item.action, item.table_name, payload, true);
+                       await showSyncNotification(item.action, item.table_name, payload, true);
+                       console.log('[SYNC] Step 5.${i}.31: Notification shown');
                     } catch (notifError) {
-                        console.error('Failed to create sync notification:', notifError);
-                        // Don't fail the entire sync if notification fails
+                        console.error('[SYNC] Failed to create sync notification');
+                        try {
+                            await db.runAsync(
+                            `INSERT INTO sync_notifications (message, type, created_at) VALUES (?, ?, datetime('now'))`,
+                            [`${item.table_name} ${item.action} synced successfully`, 'success']
+                            );
+                        } catch (fallbackError) {
+                            console.error('[SYNC] Even fallback notification failed');
+                        }
                     }
                     
                 } else {
-                    console.error(`Failed to sync item ${item.id}:`, error.message);
+                    console.error('[SYNC] Failed to sync item');
                     
-                    // Handle network errors specifically
-                    if (error.message.includes('Network request failed') || error.message.includes('fetch')) {
-                        console.log('Network error detected, stopping sync to retry later');
-                        break; // Stop the sync loop to retry later
+                    if (error.message && (error.message.includes('Network request failed') || error.message.includes('fetch'))) {
+                        console.log('[SYNC] Network error detected, stopping sync to retry later');
+                        break;
                     }
                 }
             } catch (e) {
-                console.error(`An unexpected error occurred while syncing item ${item.id}:`, e);
+                console.error('[SYNC] CRITICAL ERROR IN LOOP:', e?.message || 'unknown error');
                 
-                // If it's a network error, stop the sync process
-                if (e.message?.includes('Network') || e.message?.includes('fetch')) {
-                    console.log('Network error detected, stopping sync process');
+                if (e.message && (e.message.includes('Network') || e.message.includes('fetch'))) {
+                    console.log('[SYNC] Network error detected, stopping sync process');
                     break;
                 }
             }
         }
         
-        console.log(`Sync process finished. ${syncedCount} items synced successfully.`);
+        console.log(`[SYNC] Sync process finished. ${syncedCount} items synced successfully.`);
     } catch (error) {
-        console.error('Error during sync process:', error);
+        console.error('[SYNC] TOP LEVEL ERROR:', error?.message || 'unknown');
     }
 };
-
 // Add this function to check for pending sync notifications
+
 export const checkSyncNotifications = async (addNotification) => {
     const db = getDatabase();
     
     try {
+
         const notifications = await db.getAllAsync(
+
             'SELECT * FROM sync_notifications WHERE is_read = 0 ORDER BY created_at DESC'
+
         );
+
         
+
         console.log(`Found ${notifications.length} sync notifications to show`);
+
         
+
         for (const notif of notifications) {
+
             if (addNotification && notif.message) {
+
                 addNotification(notif.message, notif.type || 'success');
+
                 console.log('Showing sync notification:', notif.message);
+
             }
-            // Mark as read
-            await db.runAsync('UPDATE sync_notifications SET is_read = 1 WHERE id = ?', notif.id);
+
+            // Mark as read - FIX: Use array for parameters
+
+            await db.runAsync('UPDATE sync_notifications SET is_read = 1 WHERE id = ?', [notif.id]);
+
         }
-        
+
         return notifications.length;
+
     } catch (error) {
         console.error('Error checking sync notifications:', error);
         return 0;
     }
+
 };
