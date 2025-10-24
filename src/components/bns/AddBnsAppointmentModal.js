@@ -9,6 +9,9 @@ import CalendarPickerModal from '../common/CalendarPickerModal';
 import TimePickerModal from '../common/TimePickerModal';
 import { Picker } from '@react-native-picker/picker';
 import Svg, { Path } from 'react-native-svg';
+import NetInfo from '@react-native-community/netinfo';
+import { getDatabase } from '../../services/database';
+import * as Crypto from 'expo-crypto';
 
 // --- ICONS ---
 const BackArrowIcon = () => <Svg width="24" height="24" viewBox="0 0 24 24" fill="none"><Path d="M15 18L9 12L15 6" stroke="#333" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></Svg>;
@@ -112,22 +115,30 @@ export default function AddBnsAppointmentModal({ onClose, onSave }) {
                 const { error } = await supabase.from('appointments').insert([appointmentRecord]);
                 if (error) throw error;
                 addNotification('Appointment scheduled successfully.', 'success');
+                
+                try {
+                await logActivity('New BNS Appointment', `For ${formData.patient_name}`);
+                } catch (logError) {
+                    console.log('Activity logging failed:', logError);
+                }
 
             } else {
                 // --- OFFLINE LOGIC ---
                 await db.withTransactionAsync(async () => {
                     const statement = await db.prepareAsync(
-                        'INSERT INTO appointments (id, patient_display_id, patient_name, reason, date, time, status, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?);'
+                    'INSERT INTO appointments (id, patient_display_id, patient_name, reason, date, time, status, notes, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);'
                     );
                     await statement.executeAsync([
-                        appointmentRecord.id,
-                        appointmentRecord.patient_display_id, 
-                        appointmentRecord.patient_name, 
-                        appointmentRecord.reason,
-                        appointmentRecord.date, 
-                        appointmentRecord.time, 
-                        appointmentRecord.status,
-                        appointmentRecord.notes
+                    appointmentRecord.id,
+                    appointmentRecord.patient_display_id, 
+                    appointmentRecord.patient_name, 
+                    appointmentRecord.reason,
+                    appointmentRecord.date, 
+                    appointmentRecord.time, 
+                    appointmentRecord.status,
+                    appointmentRecord.notes,
+                    appointmentRecord.created_by || null,
+                    appointmentRecord.created_at
                     ]);
                     await statement.finalizeAsync();
 
@@ -140,12 +151,6 @@ export default function AddBnsAppointmentModal({ onClose, onSave }) {
                 addNotification('Appointment saved locally. Will sync when online.', 'success');
             }
 
-            // Log activity - make it offline safe
-            try {
-                await logActivity('New BNS Appointment', `For ${formData.patient_name}`);
-            } catch (logError) {
-                console.log('Activity logging failed:', logError);
-            }
             
             onSave();
             onClose();
@@ -185,12 +190,35 @@ export default function AddBnsAppointmentModal({ onClose, onSave }) {
                 <View style={styles.header}><TouchableOpacity onPress={onClose}><BackArrowIcon /></TouchableOpacity><Text style={styles.headerTitle}>New Child Appointment</Text><View style={{width: 24}} /></View>
                 <ScrollView contentContainerStyle={styles.formContainer}>
                     <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Child's Name</Text>
-                        <TextInput style={styles.input} placeholder="Type to search..." placeholderTextColor="#9ca3af" value={searchQuery} onChangeText={setSearchQuery} onFocus={() => setIsSearching(true)} />
-                        {isSearching && searchResults.length > 0 && (
-                            <View style={styles.searchResultsContainer}>
-                                <FlatList data={searchResults.slice(0, 5)} keyExtractor={item => item.id.toString()} renderItem={({ item }) => (<TouchableOpacity style={styles.searchResultItem} onPress={() => handlePatientSelect(item)}><Text>{`${item.first_name} ${item.last_name} (${item.child_id})`}</Text></TouchableOpacity>)} />
-                            </View>
+                    <Text style={styles.label}>Child's Name</Text>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Type to search..."
+                        placeholderTextColor="#9ca3af"
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
+                        onFocus={() => setIsSearching(true)}
+                    />
+
+                    {/* Search Results */}
+                    {isSearching && searchResults.length > 0 && (
+                        <View style={styles.searchResultsContainer}>
+                            <ScrollView
+                            style={{ maxHeight: 200 }}
+                            nestedScrollEnabled={true}
+                            showsVerticalScrollIndicator={true}
+                            >
+                            {searchResults.map((item) => (
+                                <TouchableOpacity
+                                key={item.id ? item.id.toString() : item.child_id.toString()}
+                                style={styles.searchResultItem}
+                                onPress={() => handlePatientSelect(item)}
+                                >
+                                <Text>{`${item.first_name} ${item.last_name} (${item.child_id})`}</Text>
+                                </TouchableOpacity>
+                            ))}
+                            </ScrollView>
+                        </View>
                         )}
                     </View>
                     <View style={styles.inputGroup}><Text style={styles.label}>Child ID</Text><TextInput style={[styles.input, styles.readOnlyInput]} placeholderTextColor="#9ca3af" value={formData.patient_id} editable={false} /></View>
@@ -213,6 +241,17 @@ export default function AddBnsAppointmentModal({ onClose, onSave }) {
                         <View style={[styles.inputGroup, { flex: 1 }]}><Text style={styles.label}>Date</Text><TouchableOpacity style={styles.dateInput} onPress={() => setIsCalendarOpen(true)}><Text style={styles.dateText}>{formData.date || 'Select a date'}</Text><CalendarIcon /></TouchableOpacity></View>
                         <View style={[styles.inputGroup, { flex: 1 }]}><Text style={styles.label}>Time</Text><TouchableOpacity style={styles.dateInput} onPress={() => setIsTimePickerOpen(true)}><Text style={styles.dateText}>{formData.time || 'Select a time'}</Text></TouchableOpacity></View>
                     </View>
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Notes (Optional)</Text>
+                        <TextInput
+                            style={[styles.input, { height: 100, textAlignVertical: 'top' }]}
+                            placeholder="Enter any additional details..."
+                            placeholderTextColor="#9ca3af"
+                            multiline
+                            value={formData.notes || ''}
+                            onChangeText={(text) => setFormData(prev => ({ ...prev, notes: text }))}
+                        />
+                        </View>
                 </ScrollView>
                 <View style={styles.footer}><TouchableOpacity style={[styles.saveButton, !isFormValid && styles.disabledButton]} onPress={handleSave} disabled={!isFormValid || loading}>{loading ? <ActivityIndicator color="white" /> : <Text style={styles.saveButtonText}>Create Appointment</Text>}</TouchableOpacity></View>
             </SafeAreaView>
@@ -232,7 +271,18 @@ const styles = StyleSheet.create({
     row: { flexDirection: 'row', gap: 10 },
     dateInput: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f3f4f6', paddingHorizontal: 15, paddingVertical: 15, borderRadius: 10, borderWidth: 1, borderColor: '#e5e7eb' },
     dateText: { fontSize: 16 },
-    searchResultsContainer: { position: 'absolute', top: 80, left: 0, right: 0, backgroundColor: 'white', borderRadius: 10, borderWidth: 1, borderColor: '#d1d5db', zIndex: 10, maxHeight: 150 },
+    searchResultsContainer: {
+        position: 'absolute',
+        top: 80,
+        left: 0,
+        right: 0,
+        backgroundColor: 'white',
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: '#d1d5db',
+        zIndex: 10,
+        maxHeight: 200,
+        },
     searchResultItem: { padding: 15, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
     pickerContainer: {
         backgroundColor: '#f3f4f6',

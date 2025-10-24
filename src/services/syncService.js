@@ -225,42 +225,25 @@ export const syncOfflineData = async () => {
                         continue;
                     }
 
-                } else if (item.action === 'create' && item.table_name === 'child_records') {
-                    console.log('[SYNC] Step 5.${i}.18: Child record create branch');
-                    
-                    const syncPayload = { ...payload };
-                    
-                    if (!syncPayload.user_id) {
-                        delete syncPayload.user_id;
-                    }
-                    
-                    syncPayload.weight_kg = syncPayload.weight_kg ? parseFloat(syncPayload.weight_kg) : null;
-                    syncPayload.height_cm = syncPayload.height_cm ? parseFloat(syncPayload.height_cm) : null;
-                    syncPayload.bmi = syncPayload.bmi ? parseFloat(syncPayload.bmi) : null;
-                    
-                    console.log('[SYNC] Step 5.${i}.19: About to insert child record');
-                    
-                    try {
-                        const { data, error: insertError } = await supabase
-                            .from('child_records')
-                            .insert([syncPayload])
-                            .select();
-                        
-                        syncResultData = data ? data[0] : null;
-                        error = insertError;
-                        console.log('[SYNC] Step 5.${i}.20: Child record insert complete');
-                    } catch (networkError) {
-                        console.error('[SYNC] Network error during child record sync');
-                        error = networkError;
-                        continue;
-                    }
-
                 } else if (item.action === 'update' && item.table_name === 'child_records') {
                     console.log('[SYNC] Step 5.${i}.21: Child record update branch');
                     
                     try {
                         // Ensure payload has required fields and handle null values
                         const updatePayload = { ...payload };
+                        
+                        // FIX: Add the same safeNumber function for update operations
+                        const safeNumber = (val) => {
+                            if (val === null || val === undefined || val === 'null' || val === 'undefined') {
+                                return null;
+                            }
+                            const num = parseFloat(val);
+                            return isNaN(num) ? null : num;
+                        };
+                        
+                        updatePayload.weight_kg = safeNumber(updatePayload.weight_kg);
+                        updatePayload.height_cm = safeNumber(updatePayload.height_cm);
+                        updatePayload.bmi = safeNumber(updatePayload.bmi);
                         
                         const { error: updateError } = await supabase
                             .from('child_records')
@@ -274,6 +257,7 @@ export const syncOfflineData = async () => {
                         error = networkError;
                         continue;
                     }
+
                 } else if (item.action === 'create') {
                     console.log('[SYNC] Step 5.${i}.23: Generic create branch');
                     try {
