@@ -12,6 +12,7 @@ import Svg, { Path } from 'react-native-svg';
 import NetInfo from '@react-native-community/netinfo';
 import { getDatabase } from '../../services/database';
 import * as Crypto from 'expo-crypto';
+import { useAuth } from '../../context/AuthContext';
 
 // --- ICONS ---
 const BackArrowIcon = () => <Svg width="24" height="24" viewBox="0 0 24 24" fill="none"><Path d="M15 18L9 12L15 6" stroke="#333" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></Svg>;
@@ -26,29 +27,142 @@ export default function AddBnsAppointmentModal({ onClose, onSave }) {
     const [isCalendarOpen, setIsCalendarOpen] = useState(false);
     const [isTimePickerOpen, setIsTimePickerOpen] = useState(false);
     const { addNotification } = useNotification();
+    const { profile } = useAuth();
 
     useEffect(() => {
+
         const fetchAllChildren = async () => {
+
             const netInfo = await NetInfo.fetch();
+
             const db = getDatabase();
+
             
+
             if (netInfo.isConnected) {
-                // Online: Fetch from Supabase
+
+                console.log("Online: Fetching children from Supabase and syncing to local DB...");
+
                 const { data, error } = await supabase.from('child_records').select('id, child_id, first_name, last_name');
-                if (error) console.error("Error fetching children:", error);
-                else setAllChildren(data || []);
-            } else {
-                // Offline: Fetch from local database
-                try {
-                    const localChildren = await db.getAllAsync('SELECT id, child_id, first_name, last_name FROM child_records ORDER BY last_name ASC');
-                    setAllChildren(localChildren || []);
-                } catch (error) {
-                    console.error("Error fetching local children:", error);
-                    setAllChildren([]);
+
+                
+
+                if (error) {
+
+                    console.error("Error fetching children from Supabase:", error);
+
+                    // If Supabase fails, try to load from local as a fallback
+
+                    try {
+
+                        console.log("Supabase failed, trying local fallback...");
+
+                        const localChildren = await db.getAllAsync('SELECT id, child_id, first_name, last_name FROM child_records ORDER BY last_name ASC');
+
+                        setAllChildren(localChildren || []);
+
+                    } catch (localError) {
+
+                        console.error("Error fetching local children as fallback:", localError);
+
+                        setAllChildren([]);
+
+                    }
+
+                } else {
+
+                    const childrenData = data || [];
+
+                    setAllChildren(childrenData); // 1. Set state for online use
+
+
+
+                    // 2. NEW: Save to local DB for offline use
+
+                    try {
+
+                        await db.withTransactionAsync(async () => {
+
+                            // Clear old records first to get the latest list
+
+                            await db.execAsync('DELETE FROM child_records;'); 
+
+
+
+                            const statement = await db.prepareAsync(
+
+                                'INSERT INTO child_records (id, child_id, first_name, last_name) VALUES (?, ?, ?, ?);'
+
+                            );
+
+                            
+
+                            for (const child of childrenData) {
+
+                                await statement.executeAsync([
+
+                                    child.id,
+
+                                    child.child_id,
+
+                                    child.first_name || '',
+
+                                    child.last_name || ''
+
+                                ]);
+
+                            }
+
+                            await statement.finalizeAsync();
+
+                        });
+
+                        console.log(`Successfully synced ${childrenData.length} children to local DB`);
+
+                    } catch (syncError) {
+
+                        console.error("Failed to sync children to local DB:", syncError);
+
+                    }
+
                 }
+
+            } else {
+
+                // Offline: Fetch from local database
+
+                console.log("Offline: Fetching children from local DB...");
+
+                try {
+
+                    const localChildren = await db.getAllAsync('SELECT id, child_id, first_name, last_name FROM child_records ORDER BY last_name ASC');
+
+                    setAllChildren(localChildren || []);
+
+                    if (localChildren && localChildren.length > 0) {
+
+                        console.log(`Loaded ${localChildren.length} children from local DB`);
+
+                    } else {
+
+                        console.log("No children found in local DB. Go online once to sync.");
+
+                    }
+
+                } catch (error) {
+
+                    console.error("Error fetching local children:", error);
+
+                    setAllChildren([]);
+
+                }
+
             }
+
         };
+
         fetchAllChildren();
+
     }, []);
 
     const searchResults = useMemo(() => {
@@ -106,7 +220,7 @@ export default function AddBnsAppointmentModal({ onClose, onSave }) {
                 time: formData.time,
                 notes: formData.notes || '',
                 status: 'Scheduled',
-                created_by: user_id, // Will be null when offline
+                created_by: profile.id, 
                 created_at: new Date().toISOString(), // Add timestamp
             };
 
@@ -137,7 +251,7 @@ export default function AddBnsAppointmentModal({ onClose, onSave }) {
                     appointmentRecord.time, 
                     appointmentRecord.status,
                     appointmentRecord.notes,
-                    appointmentRecord.created_by || null,
+                    appointmentRecord.created_by,
                     appointmentRecord.created_at
                     ]);
                     await statement.finalizeAsync();

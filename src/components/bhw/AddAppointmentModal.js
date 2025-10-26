@@ -16,6 +16,7 @@ import TimePickerModal from '../common/TimePickerModal';
 import * as Crypto from 'expo-crypto';
 import { getDatabase } from '../../services/database';
 import NetInfo from '@react-native-community/netinfo';
+import { useAuth } from '../../context/AuthContext';
 
 // --- ICONS ---
 const BackArrowIcon = () => (
@@ -38,6 +39,7 @@ export default function AddAppointmentModal({ onClose, onSave }) {
     const [isCalendarOpen, setIsCalendarOpen] = useState(false);
     const { addNotification } = useNotification();
     const [isTimePickerOpen, setIsTimePickerOpen] = useState(false);
+    const { profile } = useAuth();
 
     useEffect(() => {
         const fetchAllPatients = async () => {
@@ -98,8 +100,6 @@ export default function AddAppointmentModal({ onClose, onSave }) {
             return;
         }
         setLoading(true);
-
-        const { data: { user } } = await supabase.auth.getUser();
         
         // Generate a unique ID for the appointment
         const appointmentId = Crypto.randomUUID();
@@ -113,7 +113,7 @@ export default function AddAppointmentModal({ onClose, onSave }) {
             time: formData.time,
             notes: formData.notes,
             status: 'Scheduled',
-            created_by: user?.id,
+            created_by: profile.id,
             created_at: new Date().toISOString(), // Add timestamp
         };
 
@@ -126,6 +126,7 @@ export default function AddAppointmentModal({ onClose, onSave }) {
                 console.log("Online: Saving appointment directly to Supabase...");
                 const { error } = await supabase.from('appointments').insert([appointmentRecord]);
                 if (error) throw error;
+                await logActivity('New Appointment Scheduled', `For ${formData.patient_name} on ${formData.date}`);
                 addNotification('Appointment scheduled successfully.', 'success');
 
             } else {
@@ -134,7 +135,7 @@ export default function AddAppointmentModal({ onClose, onSave }) {
                 await db.withTransactionAsync(async () => {
                     // Insert into local appointments table
                     const statement = await db.prepareAsync(
-                        'INSERT INTO appointments (id, patient_display_id, patient_name, reason, date, time, status, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?);'
+                        'INSERT INTO appointments (id, patient_display_id, patient_name, reason, date, time, status, notes, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);'
                     );
                     await statement.executeAsync([
                         appointmentRecord.id,
@@ -144,6 +145,8 @@ export default function AddAppointmentModal({ onClose, onSave }) {
                         appointmentRecord.date, 
                         appointmentRecord.time, 
                         appointmentRecord.status,
+                        appointmentRecord.created_by,
+                        appointmentRecord.created_at,
                         appointmentRecord.notes || ''
                     ]);
                     await statement.finalizeAsync();
@@ -158,7 +161,6 @@ export default function AddAppointmentModal({ onClose, onSave }) {
                 addNotification('Appointment saved locally. Will sync when online.', 'success');
             }
 
-            await logActivity('New Appointment Scheduled', `For ${formData.patient_name} on ${formData.date}`);
             onSave();
             onClose();
 

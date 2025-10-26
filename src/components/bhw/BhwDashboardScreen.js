@@ -153,25 +153,38 @@ const BhwDashboardScreen = () => {
                     </ScrollView>
                 </View>
 
-                 <View style={[styles.section, styles.calendarSection]}>
-                    <View style={styles.calendarHeader}>
-                        <TouchableOpacity onPress={() => changeMonth(-1)}>
-                        <Text style={styles.arrow}>&lt;</Text>
-                        </TouchableOpacity>
-                        <Text style={styles.sectionTitle}>
-                        {currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
-                        </Text>
-                        <TouchableOpacity onPress={() => changeMonth(1)}>
-                        <Text style={styles.arrow}>&gt;</Text>
-                        </TouchableOpacity>
-                    </View>
+                 <View style={[styles.section]}>
+
+                    {/* The calendarHeader View is now *inside* calendarGrid */}
 
                     <View style={styles.calendarCard}>
+
                         <View style={styles.calendarGrid}>
-                        {['SUN','MON','TUE','WED','THU','FRI','SAT'].map(day => (
-                            <Text key={day} style={styles.dayHeader}>{day}</Text>
-                        ))}
-                        {generateCalendarGrid()}
+
+                            <View style={styles.calendarHeader}>
+
+                                <TouchableOpacity onPress={() => changeMonth(-1)}>
+
+                                    <Text style={styles.arrow}>&lt;</Text>
+
+                                </TouchableOpacity>
+
+                                <Text style={styles.sectionTitle}>
+
+                                    {currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
+
+                                </Text>
+
+                                <TouchableOpacity onPress={() => changeMonth(1)}>
+
+                                    <Text style={styles.arrow}>&gt;</Text>
+
+                                </TouchableOpacity>
+                            </View>
+                            {['SUN','MON','TUE','WED','THU','FRI','SAT'].map(day => (
+                                <Text key={day} style={styles.dayHeader}>{day}</Text>
+                            ))}
+                            {generateCalendarGrid()}
                         </View>
                     </View>
                 </View>
@@ -183,23 +196,35 @@ const BhwDashboardScreen = () => {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#f0f4f8' },
-    contentArea: { flex: 1, paddingTop: 0, marginTop: -25 },
+    contentArea: { flex: 1, paddingTop: 0, marginTop: -30, paddingBottom: 42 },
     section: { paddingHorizontal: 20, marginBottom: 15 },
-    sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#333', marginBottom: 10 },
+    sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#333', padding: 5 },
     quickAccessContainer: { flexDirection: 'row', gap: 15 },
     quickButton: { flex: 1, paddingVertical: 12, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
     orangeButton: { backgroundColor: '#fb923c' },
     blueButton: { backgroundColor: '#3b82f6' },
     quickButtonText: { color: 'white', fontWeight: 'bold', fontSize: 14 },
-    appointmentCard: { backgroundColor: 'white', borderRadius: 15, padding: 15, marginRight: 10, width: 150 },
+    appointmentCard: { backgroundColor: '#dbeafe', borderRadius: 15, padding: 15, marginRight: 10, width: 150 },
     appDay: { fontSize: 14, fontWeight: 'bold', color: '#1e3a8a' },
     appTime: { fontSize: 24, fontWeight: 'bold', color: '#1e3a8a', marginVertical: 2 },
-    appName: { fontSize: 14, fontWeight: '600', color: '#334155', marginVertical: 4 }, // <-- ADD THIS
+    appName: { fontSize: 12.5, fontWeight: '600', color: '#334155', marginVertical: 4 }, // <-- ADD THIS
     appReason: { fontSize: 12, color: '#6b7280' },
     noAppointmentCard: { backgroundColor: 'white', borderRadius: 15, padding: 20, width: 250, height: 110, justifyContent: 'center', alignItems: 'center' },
     noAppointmentText: { color: '#6b7280', fontStyle: 'italic', fontSize: 12 },
-    calendarHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 10, gap: 10 },
-    arrow: { fontSize: 22, color: '#6b7280', paddingHorizontal: 35, marginTop: -10 },
+    calendarHeader: { 
+        flexDirection: 'row', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        gap: 10,
+        width: '100%', 
+        marginBottom: 10,
+        paddingHorizontal: 5, // Added slight padding
+    },
+    arrow: { 
+        fontSize: 22, 
+        color: '#6b7280', 
+        padding: 5, // Made padding simpler
+    },
     
     // --- CORRECTED CALENDAR STYLES ---
     calendarGrid: {

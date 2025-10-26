@@ -114,18 +114,33 @@ export default function BnsDashboardScreen() {
                     </View>
                     
                     <View style={styles.section}>
+
                         <Text style={styles.sectionTitle}>Upcoming Appointments</Text>
+
                         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+
                             {appointments.length > 0 ? appointments.map(app => (
+
                                 <TouchableOpacity key={app.id} style={styles.appointmentCard} onPress={() => handleViewAppointment(app)}>
+
                                     <Text style={styles.appDay}>{new Date(app.date).toLocaleDateString('en-US', { weekday: 'long' })}</Text>
+
                                     <Text style={styles.appTime}>{app.time}</Text>
+
+                                    <Text style={styles.appName} numberOfLines={1}>{app.patient_name}</Text>
+
                                     <Text style={styles.appReason}>{app.reason}</Text>
+
                                 </TouchableOpacity>
+
                             )) : (
+
                                 <View style={styles.noAppointmentCard}><Text style={styles.noAppointmentText}>No upcoming appointments.</Text></View>
+
                             )}
+
                         </ScrollView>
+
                     </View>
 
                     {/* The Calendar now takes up the remaining space */}
@@ -148,10 +163,11 @@ const styles = StyleSheet.create({
     orangeButton: { backgroundColor: '#fb923c' },
     greenButton: { backgroundColor: '#22c55e' },
     quickButtonText: { color: 'white', fontWeight: 'bold' },
-    appointmentCard: { backgroundColor: '#dbeafe', borderRadius: 15, padding: 15, marginRight: 10, width: 160, justifyContent: 'center' },
-    appDay: { fontSize: 14, fontWeight: 'bold', color: '#1e3a8a' },
-    appTime: { fontSize: 28, fontWeight: 'bold', color: '#1e3a8a', marginVertical: 8 },
-    appReason: { fontSize: 14, color: '#6b7280' },
+    appointmentCard: { backgroundColor: '#bce8cbff', borderRadius: 15, padding: 15, marginRight: 10, width: 150 },
+    appDay: { fontSize: 14, fontWeight: 'bold', color: '#005312ff' },
+    appTime: { fontSize: 24, fontWeight: 'bold', color: '#005312ff', marginVertical: 2 },
+    appName: { fontSize: 12.5, fontWeight: '600', color: '#334155', marginVertical: 4 }, // <-- ADD THIS
+    appReason: { fontSize: 12, color: '#6b7280' },
     noAppointmentCard: { backgroundColor: 'white', borderRadius: 15, padding: 20, height: 120, justifyContent: 'center', alignItems: 'center' },
     noAppointmentText: { color: '#6b7280', fontStyle: 'italic' },
     calendarContainer: { flex: 1, backgroundColor: 'white', borderRadius: 15, padding: 10, elevation: 2 }, // MODIFIED: Added flex: 1
