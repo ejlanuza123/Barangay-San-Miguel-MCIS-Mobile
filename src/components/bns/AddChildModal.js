@@ -63,7 +63,7 @@ const InputField = ({ label, value, onChangeText, ...props }) => {
 const Step1 = ({ formData, handleChange, setIsCalendarOpen }) => (
     <>
         <Text style={styles.sectionTitle}>Child & Family Information</Text>
-        <InputField label="Name of BHS"  placeholderTextColor="#9ca3af" value={formData.bhs_name || 'San Miguel'} onChangeText={t => handleChange('bhs_name', t)} />
+        <InputField label="Name of BHS"  placeholderTextColor="#9ca3af" value={formData?.bhs_name || 'San Miguel'} onChangeText={t => handleChange('bhs_name', t)} />
         <InputField label="Name of Child" placeholder="Enter the name of child"  placeholderTextColor="#9ca3af" value={formData.child_name || ''} onChangeText={t => handleChange('child_name', t)} />
         <View style={styles.row}>
             <View style={{flex: 1}}>
@@ -122,7 +122,7 @@ export default function AddChildModal({ onClose, onSave, mode = 'add', initialDa
 
    useEffect(() => {
         if (mode === 'edit' && initialData) {
-        console.log('[DEBUG] Edit mode - initialData:', initialData);
+        // console.log('[DEBUG] Edit mode - initialData:', initialData);
         setFormLoading(true);
 
         if (!initialData) {
@@ -134,18 +134,18 @@ export default function AddChildModal({ onClose, onSave, mode = 'add', initialDa
         }
         
         // Ensure childId is always a string to prevent QRCode/rendering errors
-        setChildId(String(initialData.child_id || ''));
+        setChildId(String(initialData?.child_id || ''));
         
         let healthDetails = {};
         try {
-            if (initialData.health_details) {
-                console.log('[DEBUG] health_details raw:', initialData.health_details);
-                const parsed = typeof initialData.health_details === 'string' 
-                    ? JSON.parse(initialData.health_details) 
-                    : initialData.health_details;
+            if (initialData?.health_details) {
+                // console.log('[DEBUG] health_details raw:', initialData?.health_details);
+                const parsed = typeof initialData?.health_details === 'string' 
+                    ? JSON.parse(initialData?.health_details) 
+                    : initialData?.health_details;
                 // FIX: Ensure parsed health_details is always an object (handles 'null' strings)
                 healthDetails = (parsed && typeof parsed === 'object') ? parsed : {};
-                console.log('[DEBUG] health_details parsed:', healthDetails);
+                // console.log('[DEBUG] health_details parsed:', healthDetails);
             }
         } catch (error) {
             console.error('Error parsing health_details:', error);
@@ -162,7 +162,7 @@ export default function AddChildModal({ onClose, onSave, mode = 'add', initialDa
         };
 
         const sanitizeNumericField = (value) => {
-            console.log('[DEBUG] Sanitizing numeric field:', { value, type: typeof value });
+            // console.log('[DEBUG] Sanitizing numeric field:', { value, type: typeof value });
             if (value == null) return '';
             if (value === 'null' || value === 'undefined' || value === 'NaN') return '';
             if (typeof value === 'number') {
@@ -179,38 +179,38 @@ export default function AddChildModal({ onClose, onSave, mode = 'add', initialDa
 
         // Build sanitizedData with explicit String() fallbacks for safety
         const sanitizedData = {
-            bhs_name: String(sanitizeValue(healthDetails.bhs_name) || 'San Miguel'),
-            child_name: String((sanitizeValue(initialData.first_name) || '') + ' ' + (sanitizeValue(initialData.last_name) || '')),
-            dob: String(sanitizeValue(initialData.dob) || ''),
-            sex: String(sanitizeValue(initialData.sex) || ''),
-            place_of_birth: String(sanitizeValue(initialData.place_of_birth) || ''),
-            mother_name: String(sanitizeValue(initialData.mother_name) || ''),
-            father_name: String(sanitizeValue(initialData.father_name) || ''),
-            guardian_name: String(sanitizeValue(initialData.guardian_name) || ''),
-            weight_kg: sanitizeNumericField(initialData.weight_kg),
-            height_cm: sanitizeNumericField(initialData.height_cm),
-            nhts_no: String(sanitizeValue(initialData.nhts_no) || ''),
-            philhealth_no: String(sanitizeValue(initialData.philhealth_no) || ''),
-            mother_immunization_Td1: String(sanitizeValue(healthDetails.mother_immunization_Td1) || ''),
-            mother_immunization_Td2: String(sanitizeValue(healthDetails.mother_immunization_Td2) || ''),
-            mother_immunization_Td3: String(sanitizeValue(healthDetails.mother_immunization_Td3) || ''),
-            mother_immunization_Td4: String(sanitizeValue(healthDetails.mother_immunization_Td4) || ''),
-            mother_immunization_Td5: String(sanitizeValue(healthDetails.mother_immunization_Td5) || ''),
+            bhs_name: String(sanitizeValue(healthDetails?.bhs_name) || 'San Miguel'),
+            child_name: String((sanitizeValue(initialData?.first_name) || '') + ' ' + (sanitizeValue(initialData?.last_name) || '')),
+            dob: String(sanitizeValue(initialData?.dob) || ''),
+            sex: String(sanitizeValue(initialData?.sex) || ''), 
+            place_of_birth: String(sanitizeValue(initialData?.place_of_birth) || ''),
+            mother_name: String(sanitizeValue(initialData?.mother_name) || ''),
+            father_name: String(sanitizeValue(initialData?.father_name) || ''),
+            guardian_name: String(sanitizeValue(initialData?.guardian_name) || ''),
+            weight_kg: sanitizeNumericField(initialData?.weight_kg),
+            height_cm: sanitizeNumericField(initialData?.height_cm),
+            nhts_no: String(sanitizeValue(initialData?.nhts_no) || ''),
+            philhealth_no: String(sanitizeValue(initialData?.philhealth_no) || ''),
+            mother_immunization_Td1: String(sanitizeValue(healthDetails?.mother_immunization_Td1) || ''),
+            mother_immunization_Td2: String(sanitizeValue(healthDetails?.mother_immunization_Td2) || ''),
+            mother_immunization_Td3: String(sanitizeValue(healthDetails?.mother_immunization_Td3) || ''),
+            mother_immunization_Td4: String(sanitizeValue(healthDetails?.mother_immunization_Td4) || ''),
+            mother_immunization_Td5: String(sanitizeValue(healthDetails?.mother_immunization_Td5) || ''),
             'breastfeeding_1st Month': Boolean(healthDetails['breastfeeding_1st Month']),
             'breastfeeding_2nd Month': Boolean(healthDetails['breastfeeding_2nd Month']),
             'breastfeeding_3rd Month': Boolean(healthDetails['breastfeeding_3rd Month']),
             'breastfeeding_4th Month': Boolean(healthDetails['breastfeeding_4th Month']),
             'breastfeeding_5th Month': Boolean(healthDetails['breastfeeding_5th Month']),
             'breastfeeding_6th Month': Boolean(healthDetails['breastfeeding_6th Month']),
-            vitamin_a_date: String(sanitizeValue(healthDetails.vitamin_a_date) || ''),
+            vitamin_a_date: String(sanitizeValue(healthDetails?.vitamin_a_date) || ''),
         };
 
-        console.log('[DEBUG] Final sanitizedData for form:', sanitizedData);
-        console.log('[DEBUG] Numeric fields check:', {
-            weight_kg: { value: sanitizedData.weight_kg, type: typeof sanitizedData.weight_kg },
-            height_cm: { value: sanitizedData.height_cm, type: typeof sanitizedData.height_cm }
-        });
-        
+        // console.log('[DEBUG] Final sanitizedData for form:', sanitizedData);
+        // console.log('[DEBUG] Numeric fields check:', {
+        //     weight_kg: { value: sanitizedData.weight_kg, type: typeof sanitizedData.weight_kg },
+        //     height_cm: { value: sanitizedData.height_cm, type: typeof sanitizedData.height_cm }
+        // });
+        console.log("sanitized",sanitizedData)
         setFormData(sanitizedData);
         setFormLoading(false);
         } else {
@@ -249,6 +249,7 @@ export default function AddChildModal({ onClose, onSave, mode = 'add', initialDa
             generateId();
 
             setFormData({
+         
                 bhs_name: 'San Miguel',
                 child_name: '',
                 dob: '',
@@ -296,6 +297,7 @@ export default function AddChildModal({ onClose, onSave, mode = 'add', initialDa
     const handleChange = (name, value) => setFormData(prev => ({ ...prev, [name]: value }));
 
     const handleSave = async () => {
+        console.log("formdata",formData)
         if (!formData.child_name || !formData.dob) {
             addNotification("Please fill in the child's name and date of birth.", 'error');
             return;
@@ -330,8 +332,9 @@ export default function AddChildModal({ onClose, onSave, mode = 'add', initialDa
                 // Round to 2 decimal places for consistency
                 bmi = Math.round(bmi * 100) / 100;
             }
-
+            console.log("formdata id",formData.id)
             const childRecord = {
+                id:formData.id,
                 child_id: finalChildId,
                 first_name: firstName,
                 last_name: lastNameParts.join(' ') || '',
@@ -351,16 +354,16 @@ export default function AddChildModal({ onClose, onSave, mode = 'add', initialDa
             };
 
             // ADD DEBUG LOGGING
-            console.log('🔍 [DEBUG] Child record before save:', JSON.stringify(childRecord, null, 2));
-            console.log('🔍 [DEBUG] Numeric fields:', {
-                weight_kg: { type: typeof childRecord.weight_kg, value: childRecord.weight_kg },
-                height_cm: { type: typeof childRecord.height_cm, value: childRecord.height_cm },
-                bmi: { type: typeof childRecord.bmi, value: childRecord.bmi }
-            });
+            // console.log('🔍 [DEBUG] Child record before save:', JSON.stringify(childRecord, null, 2));
+            // console.log('🔍 [DEBUG] Numeric fields:', {
+            //     weight_kg: { type: typeof childRecord?.weight_kg, value: childRecord?.weight_kg },
+            //     height_cm: { type: typeof childRecord?.height_cm, value: childRecord?.height_cm },
+            //     bmi: { type: typeof childRecord?.bmi, value: childRecord?.bmi }
+            // });
 
             if (netInfo.isConnected) {
                 // --- ONLINE LOGIC ---
-                console.log(`Online: ${mode === 'edit' ? 'Updating' : 'Saving'} child record...`);
+                // console.log(`Online: ${mode === 'edit' ? 'Updating' : 'Saving'} child record...`);
                 
                 if (mode === 'edit') {
                     // EDIT MODE: Update existing child record
@@ -395,28 +398,31 @@ export default function AddChildModal({ onClose, onSave, mode = 'add', initialDa
                                 };
                                 
                             await statement.executeAsync([
-                                safeSqlValue(childRecord.first_name), 
-                                safeSqlValue(childRecord.last_name), 
-                                safeSqlValue(childRecord.dob),
-                                safeSqlValue(childRecord.sex),
-                                safeSqlValue(childRecord.place_of_birth),
-                                safeSqlValue(childRecord.mother_name),
-                                safeSqlValue(childRecord.father_name),
-                                safeSqlValue(childRecord.guardian_name),
-                                safeSqlValue(childRecord.nhts_no),
-                                safeSqlValue(childRecord.philhealth_no),
-                                safeSqlValue(childRecord.weight_kg),
-                                safeSqlValue(childRecord.height_cm),
-                                safeSqlValue(childRecord.bmi),
-                                safeSqlValue(childRecord.nutrition_status),
-                                JSON.stringify(childRecord.health_details),
-                                safeSqlValue(childRecord.child_id)
+                                safeSqlValue(childRecord?.first_name), 
+                                safeSqlValue(childRecord?.last_name), 
+                                safeSqlValue(childRecord?.dob),
+                                safeSqlValue(childRecord?.sex),
+                                safeSqlValue(childRecord?.place_of_birth),
+                                safeSqlValue(childRecord?.mother_name),
+                                safeSqlValue(childRecord?.father_name),
+                                safeSqlValue(childRecord?.guardian_name),
+                                safeSqlValue(childRecord?.nhts_no),
+                                safeSqlValue(childRecord?.philhealth_no),
+                                safeSqlValue(childRecord?.weight_kg),
+                                safeSqlValue(childRecord?.height_cm),
+                                safeSqlValue(childRecord?.bmi),
+                                safeSqlValue(childRecord?.nutrition_status),
+                                JSON.stringify(childRecord?.health_details),
+                                safeSqlValue(childRecord?.child_id)
                                 ]);
                             await statement.finalizeAsync();
 
                             const syncStatement = await db.prepareAsync(
                                 'INSERT INTO sync_queue (action, table_name, payload) VALUES (?, ?, ?);'
                             );
+                            if(!childRecord){
+                                return 
+                            }
                             await syncStatement.executeAsync([
                                 'update', 
                                 'child_records', 
@@ -442,7 +448,8 @@ export default function AddChildModal({ onClose, onSave, mode = 'add', initialDa
                                 `ID: ${finalChildId}`
                             );
                         } catch (logError) {
-                            console.log('Activity logging failed:', logError);
+                            console.error(logError)
+                            // console.log('Activity logging failed:', logError);
                         }
 
                     } catch (onlineError) {
@@ -452,28 +459,30 @@ export default function AddChildModal({ onClose, onSave, mode = 'add', initialDa
                         await db.withTransactionAsync(async () => {
                             const statement = await db.prepareAsync(
                                 `INSERT INTO child_records (
+                                id,
                                     child_id, first_name, last_name, dob, sex, place_of_birth, 
                                     mother_name, father_name, guardian_name, nhts_no, philhealth_no,
                                     weight_kg, height_cm, bmi, nutrition_status, health_details
-                                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
+                                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
                             );
                             await statement.executeAsync([
-                                childRecord.child_id, 
-                                childRecord.first_name, 
-                                childRecord.last_name, 
-                                childRecord.dob,
-                                childRecord.sex,
-                                childRecord.place_of_birth,
-                                childRecord.mother_name,
-                                childRecord.father_name,
-                                childRecord.guardian_name,
-                                childRecord.nhts_no,
-                                childRecord.philhealth_no,
-                                childRecord.weight_kg,
-                                childRecord.height_cm,
-                                childRecord.bmi,
-                                childRecord.nutrition_status,
-                                JSON.stringify(childRecord.health_details)
+                                childRecord?.id,
+                                childRecord?.child_id, 
+                                childRecord?.first_name, 
+                                childRecord?.last_name, 
+                                childRecord?.dob,
+                                childRecord?.sex,
+                                childRecord?.place_of_birth,
+                                childRecord?.mother_name,
+                                childRecord?.father_name,
+                                childRecord?.guardian_name,
+                                childRecord?.nhts_no,
+                                childRecord?.philhealth_no,
+                                childRecord?.weight_kg,
+                                childRecord?.height_cm,
+                                childRecord?.bmi,
+                                childRecord?.nutrition_status,
+                                JSON.stringify(childRecord?.health_details)
                             ]);
                             await statement.finalizeAsync();
 
@@ -489,7 +498,7 @@ export default function AddChildModal({ onClose, onSave, mode = 'add', initialDa
 
             } else {
                 // --- OFFLINE LOGIC ---
-                console.log(`Offline: ${mode === 'edit' ? 'Updating' : 'Saving'} child record locally...`);
+                // console.log(`Offline: ${mode === 'edit' ? 'Updating' : 'Saving'} child record locally...`);
                 
                 await db.withTransactionAsync(async () => {
                     // FIX: Use a safer approach for SQLite operations
@@ -511,22 +520,22 @@ export default function AddChildModal({ onClose, onSave, mode = 'add', initialDa
                         );
                         
                         await statement.executeAsync([
-                            safeValue(childRecord.first_name), 
-                            safeValue(childRecord.last_name), 
-                            safeValue(childRecord.dob),
-                            safeValue(childRecord.sex),
-                            safeValue(childRecord.place_of_birth),
-                            safeValue(childRecord.mother_name),
-                            safeValue(childRecord.father_name),
-                            safeValue(childRecord.guardian_name),
-                            safeValue(childRecord.nhts_no),
-                            safeValue(childRecord.philhealth_no),
-                            safeValue(childRecord.weight_kg),  // This was causing the error
-                            safeValue(childRecord.height_cm),  // This too
-                            safeValue(childRecord.bmi),        // And this
-                            safeValue(childRecord.nutrition_status),
-                            JSON.stringify(childRecord.health_details),
-                            safeValue(childRecord.child_id)
+                            safeValue(childRecord?.first_name), 
+                            safeValue(childRecord?.last_name), 
+                            safeValue(childRecord?.dob),
+                            safeValue(childRecord?.sex),
+                            safeValue(childRecord?.place_of_birth),
+                            safeValue(childRecord?.mother_name),
+                            safeValue(childRecord?.father_name),
+                            safeValue(childRecord?.guardian_name),
+                            safeValue(childRecord?.nhts_no),
+                            safeValue(childRecord?.philhealth_no),
+                            safeValue(childRecord?.weight_kg),  // This was causing the error
+                            safeValue(childRecord?.height_cm),  // This too
+                            safeValue(childRecord?.bmi),        // And this
+                            safeValue(childRecord?.nutrition_status),
+                            JSON.stringify(childRecord?.health_details),
+                            safeValue(childRecord?.child_id)
                         ]);
                         await statement.finalizeAsync();
 
@@ -553,22 +562,22 @@ export default function AddChildModal({ onClose, onSave, mode = 'add', initialDa
                         );
                         
                         await statement.executeAsync([
-                            safeValue(childRecord.child_id), 
-                            safeValue(childRecord.first_name), 
-                            safeValue(childRecord.last_name), 
-                            safeValue(childRecord.dob),
-                            safeValue(childRecord.sex),
-                            safeValue(childRecord.place_of_birth),
-                            safeValue(childRecord.mother_name),
-                            safeValue(childRecord.father_name),
-                            safeValue(childRecord.guardian_name),
-                            safeValue(childRecord.nhts_no),
-                            safeValue(childRecord.philhealth_no),
-                            safeValue(childRecord.weight_kg),  // This was causing the error
-                            safeValue(childRecord.height_cm),  // This too
-                            safeValue(childRecord.bmi),        // And this
-                            safeValue(childRecord.nutrition_status),
-                            JSON.stringify(childRecord.health_details)
+                            safeValue(childRecord?.child_id), 
+                            safeValue(childRecord?.first_name), 
+                            safeValue(childRecord?.last_name), 
+                            safeValue(childRecord?.dob),
+                            safeValue(childRecord?.sex),
+                            safeValue(childRecord?.place_of_birth),
+                            safeValue(childRecord?.mother_name),
+                            safeValue(childRecord?.father_name),
+                            safeValue(childRecord?.guardian_name),
+                            safeValue(childRecord?.nhts_no),
+                            safeValue(childRecord?.philhealth_no),
+                            safeValue(childRecord?.weight_kg),  // This was causing the error
+                            safeValue(childRecord?.height_cm),  // This too
+                            safeValue(childRecord?.bmi),        // And this
+                            safeValue(childRecord?.nutrition_status),
+                            JSON.stringify(childRecord?.health_details)
                         ]);
                         await statement.finalizeAsync();
 

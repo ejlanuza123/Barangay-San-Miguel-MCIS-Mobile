@@ -110,6 +110,7 @@ export default function NotificationModal({
   const NotificationItem = ({ item }) => (
     <TouchableOpacity 
       style={[
+
         styles.itemContainer,
         !item.is_read && styles.unreadItem
       ]} 
@@ -256,6 +257,10 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   itemContainer: {
+    border:1,
+    borderColor:"#a6b4b5ff",
+    marginTop:5,
+    marginBottom:5,
     flexDirection: 'row',
     alignItems: 'flex-start',
     padding: 16,
@@ -263,6 +268,10 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
     backgroundColor: 'white',
     borderRadius: 12,
+    dropShadow:"black",
+    boxShadow:"black",
+    shadowOffset:2,
+    elevation:4
   },
   unreadItem: {
     backgroundColor: '#f0f9ff',

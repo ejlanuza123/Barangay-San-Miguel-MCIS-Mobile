@@ -122,7 +122,7 @@ export const syncOfflineData = async () => {
         
         const db = getDatabase();
         console.log('[SYNC] Step 3: Database obtained');
-        
+
         const queue = await db.getAllAsync('SELECT * FROM sync_queue ORDER BY id ASC;');
         console.log('[SYNC] Step 4: Queue fetched, length:', queue?.length || 0);
 
@@ -150,6 +150,7 @@ export const syncOfflineData = async () => {
                 let payload;
                 try {
                     payload = JSON.parse(item.payload);
+                    console.log("payload",payload)
                     console.log('[SYNC] Step 5.${i}.6: Payload parsed successfully');
                 } catch (parseError) {
                     console.error('[SYNC] PARSE ERROR:', parseError?.message || 'unknown');
@@ -316,6 +317,7 @@ export const syncOfflineData = async () => {
                     }
                     
                 } else {
+                  
                     console.error('[SYNC] Failed to sync item');
                     
                     if (error.message && (error.message.includes('Network request failed') || error.message.includes('fetch'))) {

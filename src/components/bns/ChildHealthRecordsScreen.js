@@ -145,8 +145,8 @@ export default function ChildHealthRecordsScreen({ route, navigation }) {
                         
                         const stmt = await db.prepareAsync(`
                             INSERT OR REPLACE INTO child_records 
-                            (child_id, first_name, last_name, dob, sex, mother_name, nutrition_status, health_details)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+                            (id,child_id, first_name, last_name, dob, sex, mother_name, nutrition_status, health_details)
+                            VALUES (?,?, ?, ?, ?, ?, ?, ?, ?);
                         `);
                         
                         for (const child of supabaseData) {
@@ -155,6 +155,7 @@ export default function ChildHealthRecordsScreen({ route, navigation }) {
                                 : JSON.stringify(child.health_details || []);
                                 
                             await stmt.executeAsync([
+                                child.id,
                                 child.child_id,
                                 child.first_name,
                                 child.last_name,
@@ -264,6 +265,7 @@ export default function ChildHealthRecordsScreen({ route, navigation }) {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     const paginatedRecords = childRecords.slice(startIndex, endIndex);
+    // console.log(paginatedRecords)
 
     return (
         <>
@@ -287,7 +289,10 @@ export default function ChildHealthRecordsScreen({ route, navigation }) {
                         <FlatList
                         data={paginatedRecords}
                         renderItem={({ item }) => <ChildRow item={item} onPress={() => handleViewChild(item)} />}
-                        keyExtractor={(item) => item.id.toString()}
+                        keyExtractor={(item) =>{
+                            // console.log(item.id)
+                            return item.id
+                        }}
                         ListEmptyComponent={<Text style={styles.emptyText}>No child records found.</Text>}
                         />
 
