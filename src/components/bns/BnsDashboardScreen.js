@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
     calendarGrid: { flexDirection: 'row', flexWrap: 'wrap' },
     dayHeader: { width: '14.28%', textAlign: 'center', color: '#6b7280', fontWeight: 'bold', fontSize: 12, paddingBottom: 10 },
     calendarDay: { width: '14.28%', height: 35, justifyContent: 'center', alignItems: 'center' },
-    today: { width: 30, height: 30, backgroundColor: '#60a5fa', borderRadius: 15, justifyContent: 'center', alignItems: 'center' },
+    today: { width: 30, height: 30, backgroundColor: '#22c55e', borderRadius: 15, justifyContent: 'center', alignItems: 'center' },
     todayText: { color: 'white', fontWeight: 'bold' },
     modalOverlay: {
     flex: 1,

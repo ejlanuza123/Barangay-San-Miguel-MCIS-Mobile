@@ -319,7 +319,7 @@ const styles = StyleSheet.create({
     legendTag: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 15 },
     legendTagText: { fontSize: 12, fontWeight: '600' },
     addButton: {
-        backgroundColor: '#3b82f6',
+        backgroundColor: '#22c55e',
         padding: 15,
         borderRadius: 10,
         alignItems: 'center',
@@ -327,7 +327,7 @@ const styles = StyleSheet.create({
     },
     addButtonText: { color: 'white', fontWeight: 'bold', fontSize: 16 },
     paginationContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 15 },
-    paginationText: { color: '#3b82f6', fontWeight: '600' },
+    paginationText: { color: '#3ea765ff', fontWeight: '600' },
 });
 
 const badgeStyles = StyleSheet.create({

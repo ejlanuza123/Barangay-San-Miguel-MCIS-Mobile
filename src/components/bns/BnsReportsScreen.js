@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
     borderColor: "#f3f4f6",
   },
   cardDate: { fontSize: 12, color: "#9ca3af" },
-  viewText: { fontSize: 14, fontWeight: "bold", color: "#3b82f6" },
+  viewText: { fontSize: 14, fontWeight: "bold", color: '#22c55e' },
   emptyText: { textAlign: "center", marginTop: 50, color: "#6b7280" },
 });
 

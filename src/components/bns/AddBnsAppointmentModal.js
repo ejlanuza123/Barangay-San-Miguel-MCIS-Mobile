@@ -412,7 +412,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'transparent',
     },
     footer: { padding: 20, borderTopWidth: 1, borderColor: '#e5e7eb' },
-    saveButton: { backgroundColor: '#3b82f6', padding: 15, borderRadius: 10, alignItems: 'center' },
+    saveButton: { backgroundColor: '#22c55e', padding: 15, borderRadius: 10, alignItems: 'center' },
     saveButtonText: { color: 'white', fontWeight: 'bold', fontSize: 16 },
     disabledButton: { backgroundColor: '#9ca3af' },
 });

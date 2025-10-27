@@ -8,7 +8,7 @@ import {
   Switch,
   Image,
   ScrollView,
-  ActivityIndicator,
+  ActivityIndicator,Alert,
 } from "react-native";
 import { useAuth } from "../context/AuthContext";
 import { useNavigation } from "@react-navigation/native";
@@ -16,6 +16,7 @@ import { supabase } from "../services/supabase";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import Svg, { Path } from "react-native-svg";
+import { getDatabase } from "../services/database";
 
 // --- START: NEW COLOR LOGIC ---
 const getRoleColors = (role) => {
@@ -95,9 +96,9 @@ const AboutIcon = ({ color }) => (
     <Path d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
   </Svg>
 );
-const LanguageIcon = ({ color }) => (
+const ResetIcon = ({ color }) => (
   <Svg width="24" height="24" viewBox="0 0 24 24" fill={color}>
-    <Path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z" />
+    <Path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z" />
   </Svg>
 );
 const ArrowRightIcon = () => (
@@ -111,6 +112,240 @@ const ArrowRightIcon = () => (
     />
   </Svg>
 );
+
+const handleResetLocalDB = async () => {
+  Alert.alert(
+    "🔄 Reset & Resync Database",
+    "This will:\n\n• Clear all local offline data\n• Download fresh data from server\n• Recreate your local database\n\nThis ensures you have the latest data from the cloud.",
+    [
+      {
+        text: "Cancel",
+        style: "cancel"
+      },
+      {
+        text: "Reset & Resync",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            // Show progress alert
+            Alert.alert(
+              "🔄 Starting Reset...",
+              "Step 1: Clearing local data...",
+              [],
+              { cancelable: false }
+            );
+
+            const db = getDatabase();
+            
+            // Step 1: Clear all local tables
+            await db.execAsync(`
+              DELETE FROM patients;
+              DELETE FROM appointments;
+              DELETE FROM child_records;
+              DELETE FROM sync_queue;
+              DELETE FROM sync_notifications;
+            `);
+
+            // Step 2: Show downloading progress
+            setTimeout(() => {
+              Alert.alert(
+                "📥 Downloading Data...",
+                "Step 2: Fetching latest data from server...",
+                [],
+                { cancelable: false }
+              );
+            }, 1000);
+
+            // Step 3: Fetch data from Supabase with proper error handling
+            try {
+              let successCount = 0;
+              let errorCount = 0;
+
+              // Fetch patients from Supabase
+              const { data: patients, error: patientsError } = await supabase
+                .from('patients')
+                .select('*');
+
+              if (!patientsError && patients && patients.length > 0) {
+                for (const patient of patients) {
+                  try {
+                    await db.runAsync(
+                      `INSERT INTO patients (id, patient_id, first_name, middle_name, last_name, age, risk_level, contact_no, purok, street, medical_history, is_synced) 
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                      [
+                        patient.id?.toString() || '',
+                        patient.patient_id?.toString() || '',
+                        patient.first_name?.toString() || '',
+                        patient.middle_name?.toString() || '',
+                        patient.last_name?.toString() || '',
+                        parseInt(patient.age) || 0,
+                        patient.risk_level?.toString() || 'NORMAL',
+                        patient.contact_no?.toString() || '',
+                        patient.purok?.toString() || '',
+                        patient.street?.toString() || '',
+                        patient.medical_history?.toString() || '',
+                        1 // Mark as synced
+                      ]
+                    );
+                    successCount++;
+                  } catch (patientError) {
+                    console.error("Error inserting patient:", patientError);
+                    errorCount++;
+                  }
+                }
+              }
+
+              // Fetch appointments from Supabase
+              const { data: appointments, error: appointmentsError } = await supabase
+                .from('appointments')
+                .select('*');
+
+              if (!appointmentsError && appointments && appointments.length > 0) {
+                for (const appointment of appointments) {
+                  try {
+                    await db.runAsync(
+                      `INSERT INTO appointments (id, patient_display_id, patient_name, reason, date, time, status, notes, created_by, created_at) 
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                      [
+                        appointment.id?.toString() || '',
+                        appointment.patient_display_id?.toString() || '',
+                        appointment.patient_name?.toString() || '',
+                        appointment.reason?.toString() || '',
+                        appointment.date?.toString() || '',
+                        appointment.time?.toString() || '',
+                        appointment.status?.toString() || '',
+                        appointment.notes?.toString() || '',
+                        appointment.created_by?.toString() || '',
+                        appointment.created_at?.toString() || new Date().toISOString()
+                      ]
+                    );
+                    successCount++;
+                  } catch (appointmentError) {
+                    console.error("Error inserting appointment:", appointmentError);
+                    errorCount++;
+                  }
+                }
+              }
+
+              // Fetch child records from Supabase
+              const { data: childRecords, error: childRecordsError } = await supabase
+                .from('child_records')
+                .select('*');
+
+              if (!childRecordsError && childRecords && childRecords.length > 0) {
+                for (const child of childRecords) {
+                  try {
+                    // Helper function to safely convert to number or null
+                    const safeNumber = (val) => {
+                      if (val === null || val === undefined) return null;
+                      const num = parseFloat(val);
+                      return isNaN(num) ? null : num;
+                    };
+
+                    await db.runAsync(
+                      `INSERT INTO child_records (id, child_id, first_name, last_name, dob, sex, place_of_birth, mother_name, father_name, guardian_name, nhts_no, philhealth_no, weight_kg, height_cm, bmi, nutrition_status, last_checkup, health_details, created_at) 
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                      [
+                        child.id?.toString() || '',
+                        child.child_id?.toString() || '',
+                        child.first_name?.toString() || '',
+                        child.last_name?.toString() || '',
+                        child.dob?.toString() || '',
+                        child.sex?.toString() || '',
+                        child.place_of_birth?.toString() || '',
+                        child.mother_name?.toString() || '',
+                        child.father_name?.toString() || '',
+                        child.guardian_name?.toString() || '',
+                        child.nhts_no?.toString() || '',
+                        child.philhealth_no?.toString() || '',
+                        safeNumber(child.weight_kg),
+                        safeNumber(child.height_cm),
+                        safeNumber(child.bmi),
+                        child.nutrition_status?.toString() || '',
+                        child.last_checkup?.toString() || '',
+                        child.health_details?.toString() || '',
+                        child.created_at?.toString() || new Date().toISOString()
+                      ]
+                    );
+                    successCount++;
+                  } catch (childError) {
+                    console.error("Error inserting child record:", childError);
+                    errorCount++;
+                  }
+                }
+              }
+
+              // Add success notification
+              await db.runAsync(
+                `INSERT INTO sync_notifications (message, type, created_at) VALUES (?, ?, datetime('now'))`,
+                [`Database reset completed. ${successCount} records loaded, ${errorCount} errors.`, "success"]
+              );
+
+              // Show completion message
+              Alert.alert(
+                "✅ Reset Complete!",
+                `Local database has been refreshed:\n\n• ${successCount} records loaded successfully\n• ${errorCount} errors encountered\n\nYour data is now up to date.`,
+                [
+                  {
+                    text: "Awesome!",
+                    onPress: () => {
+                      // Optional: Refresh the app state
+                      // navigation.navigate("Home");
+                    }
+                  }
+                ]
+              );
+
+            } catch (syncError) {
+              console.error("❌ Sync error:", syncError);
+              showSyncError(syncError);
+            }
+
+          } catch (error) {
+            console.error("❌ Reset error:", error);
+            showResetError(error);
+          }
+        }
+      }
+    ]
+  );
+
+  const showSyncError = (error) => {
+    Alert.alert(
+      "⚠️ Sync Incomplete",
+      "Data was cleared locally but we encountered issues downloading data.\n\nYou can continue working offline - new data will be saved locally.",
+      [
+        {
+          text: "Try Again",
+          style: "destructive",
+          onPress: handleResetLocalDB
+        },
+        {
+          text: "Continue Offline",
+          style: "default"
+        }
+      ]
+    );
+  };
+
+  const showResetError = (error) => {
+    Alert.alert(
+      "🚫 Reset Failed",
+      "We couldn't complete the reset process.\n\nPlease try again or contact support if the issue continues.",
+      [
+        {
+          text: "Retry",
+          style: "destructive",
+          onPress: handleResetLocalDB
+        },
+        {
+          text: "Cancel",
+          style: "cancel"
+        }
+      ]
+    );
+  };
+};
 
 const SettingsItem = ({ icon, label, onPress, colors }) => (
   // We use the optional chaining operator (?) here to ensure it doesn't crash
@@ -139,6 +374,7 @@ export default function SettingsScreen() {
       </SafeAreaView>
     );
   }
+  
 
   const handleToggleNotifications = async (value) => {
     setNotificationsEnabled(value);
@@ -192,6 +428,7 @@ export default function SettingsScreen() {
           icon={<ProfileIcon />}
           label="Profile"
           onPress={() => navigation.navigate("ProfileView")}
+          colors={colors}
         />
 
         <Text style={styles.sectionHeader}>Preferences</Text>
@@ -208,21 +445,29 @@ export default function SettingsScreen() {
           />
         </View>
 
-        <SettingsItem icon={<HelpIcon />} label="Help" onPress={() => {}} />
+        <SettingsItem
+        icon={<HelpIcon />}
+        label="Help"
+        onPress={() => navigation.navigate("Help")} 
+        colors={colors} 
+        />
         <SettingsItem
           icon={<PrivacyIcon />}
           label="Privacy Policy"
           onPress={() => navigation.navigate("PrivacyPolicy")}
+          colors={colors}
         />
         <SettingsItem
           icon={<AboutIcon />}
           label="About"
           onPress={() => navigation.navigate("About")}
+          colors={colors}
         />
         <SettingsItem
-          icon={<LanguageIcon />}
-          label="Language Preferences"
-          onPress={() => {}}
+          icon={<ResetIcon />}
+          label="Reset Local Database"
+          onPress={handleResetLocalDB}
+          colors={colors}
         />
       </ScrollView>
 

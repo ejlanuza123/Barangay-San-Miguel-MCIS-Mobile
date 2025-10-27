@@ -10,13 +10,15 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
+import { LinearGradient } from 'expo-linear-gradient';
+import { useAuth } from "../context/AuthContext";
 
 // --- ICON for Back Button ---
 const BackArrowIcon = () => (
   <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
     <Path
       d="M15 18L9 12L15 6"
-      stroke="#1f2937"
+      stroke="#ffffff"
       strokeWidth="2.5"
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -24,128 +26,342 @@ const BackArrowIcon = () => (
   </Svg>
 );
 
-const Section = ({ title, children }) => (
-  <View style={styles.sectionContainer}>
-    <Text style={styles.sectionTitle}>{title}</Text>
+const Section = ({ title, children, index, colors }) => (
+  <View style={[styles.sectionContainer, styles.sectionElevation]}>
+    <View style={styles.sectionHeader}>
+      <View style={[styles.sectionNumber, { backgroundColor: colors.primary }]}>
+        <Text style={styles.sectionNumberText}>0{index + 1}</Text>
+      </View>
+      <Text style={styles.sectionTitle}>{title}</Text>
+    </View>
     <Text style={styles.paragraph}>{children}</Text>
   </View>
 );
 
-export default function AboutScreen({ navigation }) {
-  return (
-    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <BackArrowIcon />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>About Us</Text>
-        <View style={{ width: 24 }} />
-      </View>
+const getRoleColors = (role) => {
+  if (role === "BNS") {
+    return {
+      primary: "#6ee7b7",
+      dark: "#34d399",
+      light: "#a7f3d0",
+      headerGradient: ["#6ee7b7", "#34d399"],
+      iconFill: "#34d399",
+      iconBg: "#ecfdf5",
+    };
+  }
+  if (role === "USER/MOTHER/GUARDIAN") {
+    return {
+      primary: "#f9a8d4",
+      dark: "#f472b6",
+      light: "#fce7f3",
+      headerGradient: ["#f9a8d4", "#f472b6"],
+      iconFill: "#f472b6",
+      iconBg: "#fdf2f8",
+    };
+  }
+  return {
+    primary: "#93c5fd",
+    dark: "#60a5fa",
+    light: "#dbeafe",
+    headerGradient: ["#93c5fd", "#60a5fa"],
+    iconFill: "#60a5fa",
+    iconBg: "#f0f9ff",
+  };
+};
 
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.appInfoContainer}>
-          <Image source={require("../assets/logo.jpg")} style={styles.logo} />
+export default function AboutScreen({ navigation }) {
+  const { profile } = useAuth();
+  const colors = getRoleColors(profile?.role || "BHW");
+
+  return (
+    <View style={styles.container}>
+      <LinearGradient
+        colors={colors.headerGradient}
+        style={styles.headerGradient}
+      >
+        <SafeAreaView edges={["top"]}>
+          <View style={styles.header}>
+            <TouchableOpacity 
+              onPress={() => navigation.goBack()}
+              style={styles.backButton}
+            >
+              <BackArrowIcon />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>About Us</Text>
+            <View style={{ width: 24 }} />
+          </View>
+        </SafeAreaView>
+      </LinearGradient>
+
+      <ScrollView 
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={[styles.appInfoContainer, styles.appInfoElevation]}>
+          <LinearGradient
+            colors={colors.headerGradient}
+            style={styles.logoContainer}
+          >
+            <Image 
+              source={require("../assets/logo.jpg")} 
+              style={styles.logo} 
+            />
+          </LinearGradient>
           <Text style={styles.appName}>San Miguel MCIS Mobile</Text>
-          <Text style={styles.appVersion}>Version 1.0.0</Text>
+          <Text style={styles.appVersion}>Version 1.0.1</Text>
+          <View style={styles.divider} />
+          <Text style={[styles.appTagline, { color: colors.primary }]}>
+            Empowering Community Healthcare Through Technology
+          </Text>
         </View>
 
-        <Section title="Who are we">
+        <Section title="Who We Are" index={0} colors={colors}>
           The Barangay San Miguel Maternity and Childcare Inventory System is a
           digital platform designed to modernize and streamline maternal and
           child healthcare services at the community level. Developed as both a
           web and Android application, the system integrates patient management,
           inventory tracking, appointment scheduling, automated notifications,
-          and data analytics into a unified, secure environment. It empowers
-          Barangay Health Workers, Barangay Nutrition Scholars, barangay
-          officials, mothers, and guardians to efficiently manage health
-          records, monitor the availability of essential medical supplies, and
-          coordinate appointments and follow-ups, all while ensuring data
-          privacy and compliance with the Philippine Data Privacy Act. By
-          providing real-time access to accurate information and supporting
-          offline data entry with automatic synchronization, the system
-          addresses the long-standing challenges of manual record-keeping,
-          inventory shortages, and fragmented communication that have
-          traditionally hindered effective healthcare delivery in Barangay San
-          Miguel.
+          and data analytics into a unified, secure environment.
         </Section>
 
-        <Section title="Our Mission">
+        <Section title="Our Mission" index={1} colors={colors}>
           The mission of the Barangay San Miguel Maternity and Childcare
           Inventory System is to enhance the quality, efficiency, and
           accessibility of maternal and child healthcare services in Barangay
           San Miguel by equipping healthcare providers and families with
           innovative digital tools that facilitate accurate data management,
-          timely resource allocation, and proactive patient engagement. The
-          system is committed to supporting healthcare workers in delivering
-          personalized, evidence-based care, reducing administrative burdens,
-          and ensuring that mothers and children receive the right services at
-          the right time.
+          timely resource allocation, and proactive patient engagement.
         </Section>
 
-        <Section title="Our Vision">
+        <Section title="Our Vision" index={2} colors={colors}>
           The vision of the Barangay San Miguel Maternity and Childcare
           Inventory System is to become a model of community-driven digital
           healthcare transformation, where every mother and child in Barangay
           San Miguel benefits from seamless, equitable, and secure access to
-          essential health services. The system aspires to foster a healthier,
-          more empowered community through technology-enabled collaboration,
-          continuous improvement, and a steadfast commitment to data privacy,
-          ethical standards, and inclusive care for all.
+          essential health services.
         </Section>
+
+        <View style={styles.featuresContainer}>
+          <Text style={styles.featuresTitle}>Key Features</Text>
+          <View style={styles.featuresGrid}>
+            <View style={styles.featureItem}>
+              <View style={[styles.featureIcon, { backgroundColor: colors.headerGradient[0] }]}>
+                <Text style={styles.featureIconText}>📊</Text>
+              </View>
+              <Text style={styles.featureText}>Data Analytics</Text>
+            </View>
+            <View style={styles.featureItem}>
+              <View style={[styles.featureIcon, { backgroundColor: colors.headerGradient[1] }]}>
+                <Text style={styles.featureIconText}>🔒</Text>
+              </View>
+              <Text style={styles.featureText}>Secure & Private</Text>
+            </View>
+            <View style={styles.featureItem}>
+              <View style={[styles.featureIcon, { backgroundColor: colors.primary }]}>
+                <Text style={styles.featureIconText}>📱</Text>
+              </View>
+              <Text style={styles.featureText}>Mobile First</Text>
+            </View>
+            <View style={styles.featureItem}>
+              <View style={[styles.featureIcon, { backgroundColor: colors.dark }]}>
+                <Text style={styles.featureIconText}>⚡</Text>
+              </View>
+              <Text style={styles.featureText}>Real-time Sync</Text>
+            </View>
+          </View>
+        </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "white" },
+  container: { 
+    flex: 1, 
+    backgroundColor: "#f8fafc" 
+  },
+  headerGradient: {
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+    elevation: 8,
+  },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 15,
-    backgroundColor: "white",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e5e7eb",
+    padding: 20,
+    paddingBottom: 25,
   },
-  headerTitle: { fontSize: 18, fontWeight: "bold" },
-  content: { padding: 20, paddingBottom: 40 },
+  backButton: {
+    padding: 8,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  headerTitle: { 
+    fontSize: 24, 
+    fontWeight: "bold", 
+    color: "white",
+    letterSpacing: 0.5,
+  },
+  content: { 
+    padding: 20, 
+    paddingBottom: 40 
+  },
   appInfoContainer: {
     alignItems: "center",
     marginBottom: 30,
-    paddingBottom: 30,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f3f4f6",
+    padding: 25,
+    backgroundColor: "white",
+    borderRadius: 20,
+    marginTop: -40,
+  },
+  appInfoElevation: {
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  logoContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
+    shadowOpacity: 0.27,
+    shadowRadius: 4.65,
+    elevation: 6,
   },
   logo: {
     width: 100,
     height: 100,
     borderRadius: 20,
-    marginBottom: 15,
   },
   appName: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: "bold",
     color: "#1f2937",
     textAlign: "center",
+    marginBottom: 5,
   },
   appVersion: {
     fontSize: 14,
     color: "#6b7280",
-    marginTop: 4,
+    fontWeight: '500',
+  },
+  appTagline: {
+    fontSize: 16,
+    textAlign: "center",
+    fontStyle: 'italic',
+    marginTop: 10,
+    fontWeight: '500',
+  },
+  divider: {
+    height: 2,
+    backgroundColor: '#f1f5f9',
+    width: '40%',
+    marginVertical: 15,
+    borderRadius: 2,
   },
   sectionContainer: {
     marginBottom: 25,
+    padding: 20,
+    backgroundColor: "white",
+    borderRadius: 16,
+  },
+  sectionElevation: {
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 2.22,
+    elevation: 3,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  sectionNumber: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  sectionNumberText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 14,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: "bold",
     color: "#1f2937",
-    marginBottom: 15,
   },
   paragraph: {
     fontSize: 15,
     lineHeight: 24,
-    color: "#374151",
+    color: "#4b5563",
+  },
+  featuresContainer: {
+    backgroundColor: "white",
+    borderRadius: 16,
+    padding: 20,
+    marginTop: 10,
+  },
+  featuresTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#1f2937",
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  featuresGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  featureItem: {
+    width: '48%',
+    alignItems: 'center',
+    marginBottom: 15,
+    padding: 12,
+  },
+  featureIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  featureIconText: {
+    fontSize: 20,
+  },
+  featureText: {
+    fontSize: 12,
+    color: "#4b5563",
+    textAlign: 'center',
+    fontWeight: '500',
   },
 });

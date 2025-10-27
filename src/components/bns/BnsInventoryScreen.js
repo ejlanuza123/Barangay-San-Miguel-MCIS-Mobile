@@ -147,10 +147,10 @@ const styles = StyleSheet.create({
     legendContainer: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', marginBottom: 15 },
     legendTag: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 15 },
     legendTagText: { fontSize: 12, fontWeight: '600' },
-    addButton: { backgroundColor: '#3b82f6', padding: 15, borderRadius: 10, alignItems: 'center', elevation: 2 },
+    addButton: { backgroundColor: '#22c55e', padding: 15, borderRadius: 10, alignItems: 'center', elevation: 2 },
     addButtonText: { color: 'white', fontWeight: 'bold', fontSize: 16 },
     paginationContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 15 },
-    paginationText: { color: '#3b82f6', fontWeight: '600' },
+    paginationText: { color: '#3ea765ff', fontWeight: '600' },
     badge: { paddingVertical: 4, paddingHorizontal: 8, borderRadius: 12 },
     badgeText: { fontSize: 10, fontWeight: 'bold' },
 });

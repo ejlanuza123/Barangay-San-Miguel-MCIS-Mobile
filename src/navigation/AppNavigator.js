@@ -7,6 +7,7 @@ import { useAuth } from "../context/AuthContext";
 import { HeaderProvider } from "../context/HeaderContext";
 import PrivacyPolicyScreen from "../screens/PrivacyPolicyScreen";
 import AboutScreen from "../screens/AboutScreen";
+import HelpScreen from "../screens/HelpScreen";
 
 // --- Import ALL screens for ALL roles ---
 // Layout
@@ -89,6 +90,45 @@ const RecordsIcon = ({ color }) => (
     />
   </Svg>
 );
+
+const getRoleColors = (role) => {
+  if (role === "BNS") {
+    return {
+      primary: "#6ee7b7", // Very Light Emerald Green
+      dark: "#34d399", // Very Light Dark Emerald
+      light: "#a7f3d0", // Very Light Emerald
+      headerGradient: ["#6ee7b7", "#34d399"],
+      iconFill: "#34d399",
+      iconBg: "#ecfdf5",
+      // Keep Logout as standard red for danger
+      logoutGradient: ["#fca5a5", "#ef4444"],
+      logoutShadow: "#fca5a5",
+    };
+  }
+  if (role === "USER/MOTHER/GUARDIAN") {
+    return {
+      primary: "#f9a8d4", // Very Light Rose Pink
+      dark: "#f472b6", // Very Light Dark Rose
+      light: "#fce7f3", // Very Light Pink
+      headerGradient: ["#f9a8d4", "#f472b6"],
+      iconFill: "#f472b6",
+      iconBg: "#fdf2f8",
+      logoutGradient: ["#f9a8d4", "#f472b6"], // Light Rose Gradient for Logout
+      logoutShadow: "#f9a8d4",
+    };
+  }
+  // Default BHW (Very Light Blue)
+  return {
+    primary: "#93c5fd", // Very Light Blue
+    dark: "#60a5fa", // Very Light Dark Blue
+    light: "#dbeafe", // Very Light Blue
+    headerGradient: ["#93c5fd", "#60a5fa"],
+    iconFill: "#60a5fa",
+    iconBg: "#f0f9ff",
+    logoutGradient: ["#fca5a5", "#ef4444"],
+    logoutShadow: "#fca5a5",
+  };
+};
 
 const UserStack = () => (
   <Stack.Navigator screenOptions={{ header: () => <FixedHeader /> }}>
@@ -183,13 +223,14 @@ const WorkerTabs = () => {
   const { profile } = useAuth();
   const isBns = profile?.role === "BNS";
   const UserStack = isBns ? BnsStack : BhwStack;
+  const roleColors = getRoleColors(profile?.role);
 
   return (
     <HeaderProvider>
       <Tab.Navigator
         screenOptions={({ route }) => ({
           headerShown: false,
-          tabBarActiveTintColor: "#2563eb",
+          tabBarActiveTintColor: roleColors.dark,
           tabBarInactiveTintColor: "gray",
           tabBarShowLabel: false,
           tabBarStyle: {
@@ -329,6 +370,11 @@ const AppNavigator = () => {
       <RootStack.Screen
         name="About"
         component={AboutScreen}
+        options={{ presentation: "modal" }}
+      />
+      <RootStack.Screen
+        name="Help"
+        component={HelpScreen}
         options={{ presentation: "modal" }}
       />
       <Stack.Screen
