@@ -8,3 +8,6 @@
 ### commands
 1.npx expo prebuild --platform android --clean
 2.npm run android
+
+### generate apk
+1. ./gradlew assembleRelease
