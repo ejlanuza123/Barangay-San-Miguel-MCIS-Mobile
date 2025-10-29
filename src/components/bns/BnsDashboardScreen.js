@@ -1,6 +1,6 @@
 // src/components/bns/BnsDashboardScreen.js
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal,Button } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/supabase';
 import { useFocusEffect } from '@react-navigation/native';
@@ -8,6 +8,40 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import AddBnsAppointmentModal from './AddBnsAppointmentModal';
 import AddChildModal from './AddChildModal';
 import ViewBnsAppointmentModal from './ViewBnsAppointmentModal';
+import { useNotification } from '../../context/NotificationContext';
+
+function TestSoundButtons() {
+  const { addNotification, playNotificationSound } = useNotification();
+
+  return (
+    <View style={styles.testContainer}>
+      <Button 
+        title="Test Success Sound" 
+        onPress={() => addNotification('This is a success message!', 'success')} 
+      />
+      <Button 
+        title="Test Error Sound" 
+        onPress={() => addNotification('This is an error message!', 'error')} 
+      />
+      <Button 
+        title="Test Warning Sound" 
+        onPress={() => addNotification('This is a warning message!', 'warning')} 
+      />
+      <Button 
+        title="Test Info Sound" 
+        onPress={() => addNotification('This is an info message!', 'info')} 
+      />
+      <Button 
+        title="Direct Success Sound" 
+        onPress={() => playNotificationSound('success')} 
+      />
+      <Button 
+        title="Direct Error Sound" 
+        onPress={() => playNotificationSound('error')} 
+      />
+    </View>
+  );
+}
 
 // --- HELPER COMPONENTS ---
 const Calendar = () => {
@@ -185,4 +219,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     },
+    testContainer: {
+    gap: 10,
+    padding: 20,
+  },
 });

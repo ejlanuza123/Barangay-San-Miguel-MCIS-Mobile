@@ -96,7 +96,7 @@ export default function BhwInventoryScreen() {
             <Text style={[styles.cell, styles.categoryCell]}>{item.category}</Text>
             <Text style={[styles.cell, styles.stockCell]}>{item.quantity} units</Text>
             <View style={[styles.cell, styles.statusCell]}><StatusBadge status={item.status} /></View>
-            <Text style={[styles.cell, styles.dateCell]}>{item.expiration_date || '---'}</Text>
+            <Text style={[styles.cell, styles.dateCell]}>{item.expiry_date || '---'}</Text>
         </TouchableOpacity>
     );
 

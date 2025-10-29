@@ -85,6 +85,7 @@ export default function AddInventoryModal({ onClose, onSave, mode = 'add', initi
                     onClose={() => setIsManufactureCalendarOpen(false)}
                     onDateSelect={(date) => handleChange('manufacture_date', date)}
                     disableWeekends={false}
+                    mode="any-other-mode"
                 />
             </Modal>
 
@@ -93,16 +94,16 @@ export default function AddInventoryModal({ onClose, onSave, mode = 'add', initi
                 <View style={styles.form}>
                     <View style={styles.inputGroup}>
                         <Text style={styles.label}>Item Name</Text>
-                        <TextInput style={[styles.input, { color: "#9ca3af" }]} placeholder="Enter item name" placeholderTextColor="#9ca3af" value={formData.item_name || ''} onChangeText={t => handleChange('item_name', t)} />
+                        <TextInput style={[styles.input, { color:'#111827' }]} placeholder="Enter item name" placeholderTextColor="#9ca3af" value={formData.item_name || ''} onChangeText={t => handleChange('item_name', t)} />
                     </View>
                     <View style={styles.inputGroup}>
                         <Text style={styles.label}>Category</Text>
-                        <TextInput style={[styles.input, { color: "#9ca3af" }]} placeholder="Medicines, Equipment, etc." placeholderTextColor="#9ca3af" value={formData.category || ''} onChangeText={t => handleChange('category', t)} />
+                        <TextInput style={[styles.input, { color: '#111827' }]} placeholder="Medicines, Equipment, etc." placeholderTextColor="#9ca3af" value={formData.category || ''} onChangeText={t => handleChange('category', t)} />
                     </View>
                     <View style={styles.row}>
                         <View style={[styles.inputGroup, {flex: 1}]}>
                             <Text style={styles.label}>Quantity</Text>
-                            <TextInput style={[styles.input, { color: "#9ca3af" }]} placeholder="Enter the Quantity." placeholderTextColor="#9ca3af" value={String(formData.quantity || '')} onChangeText={t => handleChange('quantity', t)} keyboardType="numeric" />
+                            <TextInput style={[styles.input, { color: '#111827' }]} placeholder="Enter the Quantity." placeholderTextColor="#9ca3af" value={String(formData.quantity || '')} onChangeText={t => handleChange('quantity', t)} keyboardType="numeric" />
                         </View>
                     </View>
                     <View style={styles.inputGroup}>
@@ -151,7 +152,6 @@ const styles = StyleSheet.create({
         padding: 15, 
         borderRadius: 10, 
         fontSize: 16, 
-        // marginBottom: 15, <-- REMOVED from here
         borderWidth: 1, 
         borderColor: '#e5e7eb',
         color: '#111827' 

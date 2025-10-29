@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
     monthItem: {
         width: '30%',
         alignItems: 'center',
-        paddingVertical: 15,
+        paddingVertical: 9,
         margin: 5,
         borderRadius: 10,
         backgroundColor: '#f3f4f6'

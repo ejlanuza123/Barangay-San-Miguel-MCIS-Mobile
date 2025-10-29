@@ -17,6 +17,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import Svg, { Path } from "react-native-svg";
 import { getDatabase } from "../services/database";
+import { useSoundSettings } from '../context/SoundSettingsContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const SoundIcon = ({ color }) => (
+  <Svg width="24" height="24" viewBox="0 0 24 24" fill={color}>
+    <Path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
+  </Svg>
+);
 
 // --- START: NEW COLOR LOGIC ---
 const getRoleColors = (role) => {
@@ -363,6 +371,20 @@ export default function SettingsScreen() {
   const { profile, signOut } = useAuth();
   const navigation = useNavigation();
   const colors = getRoleColors(profile?.role || "BHW");
+  const { soundEnabled, toggleSound } = useSoundSettings();
+
+  const handleToggleSound = async (value) => {
+      console.log(`🎚️ Toggling sound from ${soundEnabled} to ${value}`);
+      try {
+          await toggleSound(value); // This calls the function from useSoundSettings hook
+          // Verify the setting was saved
+          const verify = await AsyncStorage.getItem('notification_sound_enabled');
+          console.log(`✅ Sound setting saved: ${verify}`);
+      } catch (error) {
+          console.error('❌ Error saving sound setting:', error);
+      }
+  };
+
   const [notificationsEnabled, setNotificationsEnabled] = useState(
     profile?.preferences?.in_app_notifications ?? true
   );
@@ -442,6 +464,19 @@ export default function SettingsScreen() {
             onValueChange={handleToggleNotifications}
             trackColor={{ false: "#d1d5db", true: "#93c5fd" }}
             thumbColor={notificationsEnabled ? "#3b82f6" : "#f4f3f4"}
+          />
+        </View>
+
+        <View style={styles.item}>
+          <View style={[styles.itemIcon, { backgroundColor: colors?.iconBg }]}>
+            <SoundIcon color={colors?.iconFill} />
+          </View>
+          <Text style={styles.itemLabel}>Notification Sound</Text>
+          <Switch
+            value={soundEnabled}
+            onValueChange={toggleSound}
+            trackColor={{ false: "#d1d5db", true: "#93c5fd" }}
+            thumbColor={soundEnabled ? "#3b82f6" : "#f4f3f4"}
           />
         </View>
 

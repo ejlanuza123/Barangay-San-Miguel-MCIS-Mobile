@@ -11,6 +11,7 @@ import { NotificationProvider } from "./src/context/NotificationContext"; // <--
 import { initDatabase } from './src/services/database';
 import OfflineIndicator from './src/components/layout/OfflineIndicator';
 import { SafeAreaProvider } from "react-native-safe-area-context"; 
+import { SoundSettingsProvider } from './src/context/SoundSettingsContext';
 
 // Import all screens and navigators
 import SplashScreen from "./src/screens/SplashScreen";
@@ -120,10 +121,12 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
       <AuthProvider>
-        <NotificationProvider>
-          <RootNavigator />
-          <OfflineIndicator />
-        </NotificationProvider>
+        <SoundSettingsProvider>
+          <NotificationProvider>
+            <RootNavigator />
+            <OfflineIndicator />
+          </NotificationProvider>
+        </SoundSettingsProvider>  
       </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
