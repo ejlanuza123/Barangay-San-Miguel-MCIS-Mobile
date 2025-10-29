@@ -29,8 +29,7 @@
     },
     "plugins": [
       "expo-sqlite",
-      "expo-secure-store",
-      "expo-audio"
+      "expo-secure-store"
     ],
     "extra": {
       "eas": {
