@@ -21,6 +21,18 @@ const Calendar = ({ onDateSelect, disableWeekends, mode }) => {
         return Array.from({ length: endYear - startYear + 1 }, (_, i) => startYear + i);
     }, [today]);
 
+    // Calculate initial year offset to show 2020 when opening year picker
+    const calculateInitialYearOffset = () => {
+        const targetYear = 2020;
+        const yearIndex = years.indexOf(targetYear);
+        if (yearIndex !== -1) {
+            // Calculate which page contains 2020
+            return Math.floor(yearIndex / yearsPerPage) * yearsPerPage;
+        }
+        // Fallback: show current year's page if 2020 not found
+        const currentYearIndex = years.indexOf(today.getFullYear());
+        return Math.floor(currentYearIndex / yearsPerPage) * yearsPerPage;
+    };
     const months = useMemo(() => ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], []);
 
     const changeMonth = (amount) => {
@@ -209,6 +221,12 @@ const Calendar = ({ onDateSelect, disableWeekends, mode }) => {
         }
     };
 
+    const openYearView = () => {
+        const initialOffset = calculateInitialYearOffset();
+        setYearOffset(initialOffset);
+        setViewMode('years');
+    };
+
     return (
         <View style={styles.calendarContainer}>
             <View style={styles.calendarHeader}>
@@ -219,7 +237,8 @@ const Calendar = ({ onDateSelect, disableWeekends, mode }) => {
                     <TouchableOpacity onPress={() => setViewMode('months')}>
                         <Text style={styles.monthTitle}>{currentDate.toLocaleString('default', { month: 'long' })}</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => setViewMode('years')}>
+                    {/* Change this line to use openYearView instead of setViewMode */}
+                    <TouchableOpacity onPress={openYearView}>
                         <Text style={styles.yearTitle}>{currentDate.getFullYear()}</Text>
                     </TouchableOpacity>
                 </View>
@@ -403,12 +422,12 @@ const styles = StyleSheet.create({
         flexWrap: 'wrap',
         justifyContent: 'center',
         alignItems: 'center',
-        paddingTop: 20
+        paddingTop: 0
     },
     monthItem: {
         width: '30%',
         alignItems: 'center',
-        paddingVertical: 9,
+        paddingVertical: 11,
         margin: 5,
         borderRadius: 10,
         backgroundColor: '#f3f4f6'

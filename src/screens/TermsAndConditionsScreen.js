@@ -81,7 +81,9 @@ const TermsAndConditionsScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: '#2dd4bf' },
     container: { flex: 1, padding: 20, justifyContent: 'center' },
-    header: { fontSize: 28, fontWeight: 'bold', color: 'white', textAlign: 'center', marginVertical: 20 },
+    header: { fontSize: 28, fontWeight: 'bold', color: 'white', textAlign: 'center', marginVertical: 20, textShadowColor: 'rgba(0, 0, 0, 0.4)',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 3 },
     card: { flex: 1, backgroundColor: 'white', borderRadius: 20, padding: 20, overflow: 'hidden' },
     scrollView: { flex: 1 },
     heading: { fontSize: 18, fontWeight: 'bold', marginTop: 16, marginBottom: 8, color: '#333' },

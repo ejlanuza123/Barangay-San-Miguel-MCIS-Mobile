@@ -1,4 +1,3 @@
-//App.js
 import "react-native-gesture-handler";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { View } from "react-native";
@@ -13,9 +12,9 @@ import OfflineIndicator from './src/components/layout/OfflineIndicator';
 import { SafeAreaProvider } from "react-native-safe-area-context"; 
 import { SoundSettingsProvider } from './src/context/SoundSettingsContext';
 
+
 // Import all screens and navigators
-import SplashScreen from "./src/screens/SplashScreen";
-import GetStartedScreen from "./src/screens/GetStartedScreen";
+import OnboardingFlowScreen from "./src/screens/OnboardingFlowScreen"; // <-- IMPORT NEW SCREEN
 import TermsAndConditionsScreen from "./src/screens/TermsAndConditionsScreen";
 import AuthNavigator from "./src/navigation/AuthNavigator";
 import AppNavigator from "./src/navigation/AppNavigator";
@@ -37,35 +36,46 @@ const linking = {
   },
 };
 
-function RootNavigator() {
+// 1. RootNavigator now accepts dbInitialized as a prop
+function RootNavigator({ dbInitialized }) {
   const { user, loading, isOnboardingComplete } = useAuth();
   const navigationRef = useNavigationContainerRef();
   const [isNavigationReady, setIsNavigationReady] = useState(false);
 
+  // 2. Combine auth loading state and db loading state
+  const isAppLoading = loading || !dbInitialized;
+
   // Handle navigation reset when user logs out
   useEffect(() => {
-    if (isNavigationReady && !loading && !user) {
-      // Reset navigation stack to show auth flow
+    // Ensure this only runs when the app is NOT loading and navigation is ready
+    if (!isAppLoading && isNavigationReady && !user) {
       navigationRef.reset({
         index: 0,
         routes: [
           { 
-            name: isOnboardingComplete ? 'Auth' : 'Splash' 
+            name: isOnboardingComplete ? 'Auth' : 'Onboarding' 
           }
         ],
       });
     }
-  }, [user, loading, isOnboardingComplete, isNavigationReady]);
+  }, [user, isAppLoading, isOnboardingComplete, isNavigationReady, navigationRef]);
 
   // Handle navigation state change to know when navigator is ready
   const onNavigationReady = useCallback(() => {
     setIsNavigationReady(true);
   }, []);
 
-  if (loading) {
-    return <SplashScreen />;
+  // 3. If the app is loading (auth or DB), render the OnboardingFlowScreen directly.
+  // This screen will just show its animation. Once loading is false,
+  // the component will re-render and show the NavigationContainer below.
+  if (isAppLoading) {
+    // We pass a dummy navigation prop so the component doesn't crash
+    // when its useEffect timer tries to call navigation.replace.
+    // The "real" navigation will take over once loading is complete.
+    return <OnboardingFlowScreen navigation={{ replace: () => {} }} />;
   }
 
+  // 4. Once loading is complete, render the actual navigator
   return (
     <NavigationContainer 
       ref={navigationRef}
@@ -79,15 +89,14 @@ function RootNavigator() {
             ? "App" 
             : isOnboardingComplete 
               ? "Auth"
-              : "Splash"
+              : "Onboarding" // This will be the first "real" screen
         }
       >
         {user ? (
           <Stack.Screen name="App" component={AppNavigator} />
         ) : (
           <>
-            <Stack.Screen name="Splash" component={SplashScreen} />
-            <Stack.Screen name="GetStarted" component={GetStartedScreen} />
+            <Stack.Screen name="Onboarding" component={OnboardingFlowScreen} /> 
             <Stack.Screen name="Terms" component={TermsAndConditionsScreen} />
             <Stack.Screen name="Auth" component={AuthNavigator} />
           </>
@@ -100,7 +109,6 @@ function RootNavigator() {
 export default function App() {
   const [dbInitialized, setDbInitialized] = useState(false);
 
-  // <-- 2. Add this useEffect to initialize the database on startup
   useEffect(() => {
     initDatabase()
       .then(() => {
@@ -109,21 +117,20 @@ export default function App() {
       })
       .catch(error => {
         console.error("Database initialization failed:", error);
+        setDbInitialized(true); // Still set to true to proceed
       });
   }, []);
 
-  // 3. Optional: You can show a loading screen until the DB is ready
-  if (!dbInitialized) {
-    return null; // Or your custom loading component
-  }
-
+  // 5. REMOVED the `if (!dbInitialized) { return null; }` check.
+  // We now render the providers and RootNavigator immediately.
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
       <AuthProvider>
         <SoundSettingsProvider>
           <NotificationProvider>
-            <RootNavigator />
+            {/* 6. Pass dbInitialized state down to RootNavigator */}
+            <RootNavigator dbInitialized={dbInitialized} />
             <OfflineIndicator />
           </NotificationProvider>
         </SoundSettingsProvider>  
@@ -132,3 +139,4 @@ export default function App() {
     </GestureHandlerRootView>
   );
 }
+

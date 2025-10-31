@@ -16,6 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import Svg, { Path } from "react-native-svg";
 import { LinearGradient } from "expo-linear-gradient";
+import { Picker } from '@react-native-picker/picker';
 
 const getRoleColors = (role) => {
   if (role === "BNS") {
@@ -219,13 +220,36 @@ export default function ProfileEditScreen({ navigation }) {
           }
           keyboardType="phone-pad"
         />
-        <InputField
-          label="Assigned Purok"
-          value={formData.assigned_purok}
-          onChangeText={(text) =>
-            setFormData({ ...formData, assigned_purok: text })
+       <View style={styles.inputContainer}>
+      <Text style={styles.label}>Assigned Purok</Text>
+      <View style={styles.pickerContainer}>
+        <Picker
+          selectedValue={formData.assigned_purok}
+          onValueChange={(itemValue) =>
+            setFormData({ ...formData, assigned_purok: itemValue })
           }
-        />
+          style={styles.picker}
+          dropdownIconColor="#6b7280"
+        >
+          <Picker.Item label="Select Purok..." value="" style={styles.pickerItem} />
+          <Picker.Item label="Purok Bagong Silang Zone 1" value="Purok Bagong Silang Zone 1" style={styles.pickerItem} />
+          <Picker.Item label="Purok Bagong Silang Zone 2" value="Purok Bagong Silang Zone 2" style={styles.pickerItem} />
+          <Picker.Item label="Purok Masigla Zone 1" value="Purok Masigla Zone 1" style={styles.pickerItem} />
+          <Picker.Item label="Purok Masigla Zone 2" value="Purok Masigla Zone 2" style={styles.pickerItem} />
+          <Picker.Item label="Purok Masaya" value="Purok Masaya" style={styles.pickerItem} />
+          <Picker.Item label="Purok Bagong Lipunan" value="Purok Bagong Lipunan" style={styles.pickerItem} />
+          <Picker.Item label="Purok Dagomboy" value="Purok Dagomboy" style={styles.pickerItem} />
+          <Picker.Item label="Purok Katarungan Zone 1" value="Purok Katarungan Zone 1" style={styles.pickerItem} />
+          <Picker.Item label="Purok Katarungan Zone 2" value="Purok Katarungan Zone 2" style={styles.pickerItem} />
+          <Picker.Item label="Purok Pagkakaisa" value="Purok Pagkakaisa" style={styles.pickerItem} />
+          <Picker.Item label="Purok Kilos-Agad" value="Purok Kilos-Agad" style={styles.pickerItem} />
+          <Picker.Item label="Purok Balikatan" value="Purok Balikatan" style={styles.pickerItem} />
+          <Picker.Item label="Purok Bayanihan" value="Purok Bayanihan" style={styles.pickerItem} />
+          <Picker.Item label="Purok Magkakapitbahay" value="Purok Magkakapitbahay" style={styles.pickerItem} />
+          <Picker.Item label="Purok Magara Zone 2" value="Purok Magara Zone 2" style={styles.pickerItem} />
+        </Picker>
+      </View>
+    </View>
       </ScrollView>
 
       {/* Save Button */}
@@ -315,4 +339,26 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   saveButtonText: { color: "white", fontWeight: "bold", fontSize: 16 },
+  pickerContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    marginBottom: 10,
+    justifyContent: 'center',
+    height: 50,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  picker: {
+    height: 50,
+    width: '100%',
+    color: '#111827',
+  },
+  pickerItem: {
+    fontSize: 16,
+    color: '#ffffffff',
+  },
 });

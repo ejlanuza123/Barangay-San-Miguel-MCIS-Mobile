@@ -50,8 +50,41 @@ const Step1 = ({ formData, handleChange, setIsCalendarOpen, setCalendarField }) 
         />
         <TextInput style={styles.input} placeholder="Blood Type" placeholderTextColor="#9ca3af" value={formData.blood_type} onChangeText={t => handleChange('blood_type', t)} />
         <TextInput style={styles.input} placeholder="Contact No." placeholderTextColor="#9ca3af" value={formData.contact_no} onChangeText={t => handleChange('contact_no', t)} keyboardType="phone-pad" />
-        <TextInput style={styles.input} placeholder="Address (Purok, Street)" placeholderTextColor="#9ca3af" value={formData.address} onChangeText={t => handleChange('address', t)} />
-
+        <View style={styles.pickerContainer}>
+        <Text style={styles.label}>Purok</Text>
+        <View style={styles.pickerWrapper}>
+            <Picker
+            selectedValue={formData.purok}
+            onValueChange={(itemValue) => handleChange('purok', itemValue)}
+            style={styles.picker}
+            dropdownIconColor="#6b7280"
+            >
+            <Picker.Item label="Select Purok..." value="" />
+            <Picker.Item label="Purok Bagong Silang Zone 1" value="Purok Bagong Silang Zone 1" />
+            <Picker.Item label="Purok Bagong Silang Zone 2" value="Purok Bagong Silang Zone 2" />
+            <Picker.Item label="Purok Masigla Zone 1" value="Purok Masigla Zone 1" />
+            <Picker.Item label="Purok Masigla Zone 2" value="Purok Masigla Zone 2" />
+            <Picker.Item label="Purok Masaya" value="Purok Masaya" />
+            <Picker.Item label="Purok Bagong Lipunan" value="Purok Bagong Lipunan" />
+            <Picker.Item label="Purok Dagomboy" value="Purok Dagomboy" />
+            <Picker.Item label="Purok Katarungan Zone 1" value="Purok Katarungan Zone 1" />
+            <Picker.Item label="Purok Katarungan Zone 2" value="Purok Katarungan Zone 2" />
+            <Picker.Item label="Purok Pagkakaisa" value="Purok Pagkakaisa" />
+            <Picker.Item label="Purok Kilos-Agad" value="Purok Kilos-Agad" />
+            <Picker.Item label="Purok Balikatan" value="Purok Balikatan" />
+            <Picker.Item label="Purok Bayanihan" value="Purok Bayanihan" />
+            <Picker.Item label="Purok Magkakapitbahay" value="Purok Magkakapitbahay" />
+            <Picker.Item label="Purok Magara Zone 2" value="Purok Magara Zone 2" />
+            </Picker>
+        </View>
+        </View>
+        <TextInput 
+            style={styles.input} 
+            placeholder="Street/Additional Address Details" 
+            placeholderTextColor="#9ca3af" 
+            value={formData.street} 
+            onChangeText={t => handleChange('street', t)} 
+            />
         <Text style={styles.sectionTitle}>ID Numbers</Text>
         <TextInput style={styles.input} placeholder="NHTS No." placeholderTextColor="#9ca3af" value={formData.nhts_no} onChangeText={t => handleChange('nhts_no', t)} />
         <TextInput style={styles.input} placeholder="PhilHealth No." placeholderTextColor="#9ca3af" value={formData.philhealth_no} onChangeText={t => handleChange('philhealth_no', t)} />
@@ -174,7 +207,9 @@ export default function AddPatientModal({ onClose, onSave, mode = 'add', initial
                 last_name: initialData.last_name, first_name: initialData.first_name,
                 middle_name: initialData.middle_name, age: initialData.age?.toString(),
                 contact_no: initialData.contact_no,
-                dob: initialData.medical_history?.dob || '' // Add this line
+                dob: initialData.medical_history?.dob || '',
+                purok: initialData.purok || '', // Add this line
+                street: initialData.street || ''
             }));
         } else {
             const generateId = async () => {
@@ -241,13 +276,8 @@ export default function AddPatientModal({ onClose, onSave, mode = 'add', initial
 
         try {
             // Parse the address into purok and street
-            let purok = formData.address || '';
-            let street = '';
-            if (formData.address?.includes(',')) {
-                const parts = formData.address.split(',');
-                purok = parts[0]?.trim();
-                street = parts.slice(1).join(',').trim();
-            }
+            let purok = formData.purok || '';
+            let street = formData.street || '';
 
             let finalPatientId = patientId;
             
@@ -482,6 +512,13 @@ const styles = StyleSheet.create({
     saveButtonText: { fontWeight: 'bold', color: 'white' },
     pickerContainer: {
         marginBottom: 10,
+    },
+
+    label: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#4b5563',
+        marginBottom: 8,
     },
     pickerLabel: {
         fontSize: 14,

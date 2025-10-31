@@ -28,7 +28,7 @@ import BnsInventoryScreen from "../components/bns/BnsInventoryScreen";
 import BnsReportsScreen from "../components/bns/BnsReportsScreen";
 import BnsViewReportScreen from "../components/bns/BnsViewReportScreen";
 import ViewBnsInventoryModal from "../components/bns/ViewBnsInventoryModal";
-// NEW: Import user screens
+// User screens
 import UserDashboardScreen from "../components/user/UserDashboardScreen";
 import AppointmentScreen from "../components/user/AppointmentScreen";
 import ViewUserRecords from "../components/user/ViewUserRecords";

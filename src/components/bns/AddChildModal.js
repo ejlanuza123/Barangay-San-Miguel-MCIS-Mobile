@@ -11,6 +11,7 @@ import * as Crypto from 'expo-crypto';
 import { getDatabase } from '../../services/database';
 import NetInfo from '@react-native-community/netinfo';
 import CalendarPickerModal from '../common/CalendarPickerModal';
+import { Picker } from '@react-native-picker/picker';
 
 // --- ICONS & HELPER COMPONENTS ---
 const BackArrowIcon = () => <Svg width="24" height="24" viewBox="0 0 24 24" fill="none"><Path d="M15 18L9 12L15 6" stroke="#333" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></Svg>;
@@ -76,7 +77,21 @@ const Step1 = ({ formData, handleChange, setIsCalendarOpen }) => (
                     <CalendarIcon />
                 </TouchableOpacity>
             </View>
-            <InputField containerStyle={{flex:1}} label="Sex"  placeholderTextColor="#9ca3af" placeholder="Male/Female" value={formData.sex || ''} onChangeText={t => handleChange('sex', t)} />
+             <View style={{flex: 1}}>
+              <Text style={styles.label}>Sex</Text>
+              <View style={styles.pickerContainer}>
+                <Picker
+                  selectedValue={formData.sex || ''}
+                  onValueChange={(itemValue) => handleChange('sex', itemValue)}
+                  style={styles.picker}
+                  dropdownIconColor="#9ca3af"
+                >
+                  <Picker.Item label="Select sex..." value="" style={styles.pickerItem} />
+                  <Picker.Item label="Male" value="Male" style={styles.pickerItem} />
+                  <Picker.Item label="Female" value="Female" style={styles.pickerItem} />
+                </Picker>
+              </View>
+            </View>
         </View>
         <InputField label="Place of Birth" placeholder="Enter place of birth" placeholderTextColor="#9ca3af" value={formData.place_of_birth || ''} onChangeText={t => handleChange('place_of_birth', t)} />
         <InputField label="Name of Mother" placeholder="Enter the name of mother" placeholderTextColor="#9ca3af" value={formData.mother_name || ''} onChangeText={t => handleChange('mother_name', t)} />
@@ -85,7 +100,7 @@ const Step1 = ({ formData, handleChange, setIsCalendarOpen }) => (
     </>
 );
 
-const Step2 = ({ formData, handleChange }) => (
+const Step2 = ({ formData, handleChange, setIsCalendarOpen, setActiveDateField }) => (
     <>
         <Text style={styles.sectionTitle}>Measurements & ID Numbers</Text>
         <View style={styles.row}>
@@ -98,7 +113,21 @@ const Step2 = ({ formData, handleChange }) => (
         <Text style={styles.sectionTitle}>Mother's Immunization Status (Td)</Text>
         <View style={styles.grid}>
             {['Td1', 'Td2', 'Td3', 'Td4', 'Td5'].map(v => (
-                <InputField containerStyle={styles.gridInput} key={v} label={v} placeholderTextColor="#9ca3af" placeholder="YYYY-MM-DD" value={formData[`mother_immunization_${v}`] || ''} onChangeText={t => handleChange(`mother_immunization_${v}`, t)} />
+                <View key={v} style={styles.gridInput}>
+                    <Text style={styles.label}>{v}</Text>
+                    <TouchableOpacity 
+                        style={styles.dateInput} 
+                        onPress={() => {
+                            setActiveDateField(`mother_immunization_${v}`);
+                            setIsCalendarOpen(true);
+                        }}
+                    >
+                        <Text style={[styles.inputText, !formData[`mother_immunization_${v}`] && styles.placeholderText]}>
+                            {formData[`mother_immunization_${v}`] || 'YYYY-MM-DD'}
+                        </Text>
+                        <CalendarIcon />
+                    </TouchableOpacity>
+                </View>
             ))}
         </View>
 
@@ -107,7 +136,21 @@ const Step2 = ({ formData, handleChange }) => (
             {['1st Month', '2nd Month', '3rd Month', '4th Month', '5th Month', '6th Month'].map(month => <Checkbox key={month} label={month} value={!!formData[`breastfeeding_${month}`]} onValueChange={v => handleChange(`breastfeeding_${month}`, v)} />)}
         </View>
 
-        <InputField label="Vitamin A (Date Given)"  placeholderTextColor="#9ca3af" placeholder="YYYY-MM-DD" value={formData.vitamin_a_date || ''} onChangeText={t => handleChange('vitamin_a_date', t)} />
+        <View>
+            <Text style={styles.label}>Vitamin A (Date Given)</Text>
+            <TouchableOpacity 
+                style={styles.dateInput} 
+                onPress={() => {
+                    setActiveDateField('vitamin_a_date');
+                    setIsCalendarOpen(true);
+                }}
+            >
+                <Text style={[styles.inputText, !formData.vitamin_a_date && styles.placeholderText]}>
+                    {formData.vitamin_a_date || 'YYYY-MM-DD'}
+                </Text>
+                <CalendarIcon />
+            </TouchableOpacity>
+        </View>
     </>
 );
 
@@ -119,6 +162,7 @@ export default function AddChildModal({ onClose, onSave, mode = 'add', initialDa
     const { addNotification } = useNotification();
     const [formLoading, setFormLoading] = useState(true);
     const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+    const [activeDateField, setActiveDateField] = useState('');
 
    useEffect(() => {
         if (mode === 'edit' && initialData) {
@@ -621,7 +665,9 @@ export default function AddChildModal({ onClose, onSave, mode = 'add', initialDa
                 <CalendarPickerModal
                     onClose={() => setIsCalendarOpen(false)}
                     onDateSelect={(date) => {
-                        handleChange('dob', date);
+                        if (activeDateField) {
+                            handleChange(activeDateField, date);
+                        }
                         setIsCalendarOpen(false);
                     }}
                     mode="any-other-mode"
@@ -652,8 +698,8 @@ export default function AddChildModal({ onClose, onSave, mode = 'add', initialDa
                         );
                     })()}
                 </View>
-                {step === 1 && <Step1 formData={formData} handleChange={handleChange} setIsCalendarOpen={setIsCalendarOpen} />}
-                {step === 2 && <Step2 formData={formData} handleChange={handleChange} />}
+                {step === 1 && <Step1 formData={formData} handleChange={handleChange} setIsCalendarOpen={setIsCalendarOpen} setActiveDateField={setActiveDateField} />}
+                {step === 2 && <Step2 formData={formData} handleChange={handleChange} setIsCalendarOpen={setIsCalendarOpen} setActiveDateField={setActiveDateField} />}
             </ScrollView>
             <View style={styles.footer}>
                 {step > 1 && <TouchableOpacity style={styles.navButton} onPress={() => setStep(step - 1)}><Text style={styles.navButtonText}>Previous</Text></TouchableOpacity>}
@@ -703,10 +749,57 @@ const styles = StyleSheet.create({
     placeholderText: {
         color: '#9ca3af',
     },
+    pickerContainer: {
+        backgroundColor: '#f9fafb',
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: '#d1d5db',
+        marginBottom: 10,
+        justifyContent: 'center',
+        height: 50, // Match date input height
+    },
+    picker: {
+        height: 50,
+        width: '100%',
+        color: '#53565cff',
+        backgroundColor: 'transparent',
+    },
+    pickerItem: {
+        fontSize: 16,
+        color: '#ffffffff',
+    },
     row: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
     inputRow: { flex: 1 },
-    grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
-    gridInput: { width: '32%', marginBottom: 10 },
+    grid: { 
+        flexDirection: 'row', 
+        flexWrap: 'wrap', 
+        justifyContent: 'space-between' 
+    },
+    gridInput: { 
+        width: '48%',  // Changed from 32% to 48% for better spacing
+        marginBottom: 15  // Increased margin for better spacing
+    },
+    dateInput: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        backgroundColor: '#f9fafb',
+        padding: 12,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: '#d1d5db',
+        marginBottom: 10,
+        minHeight: 50,  // Added minHeight for consistent height
+    },
+    inputText: {
+        fontSize: 16,
+        color: '#111827',
+        flex: 1,  // Added flex to allow text to take available space
+        marginRight: 8,  // Added margin to separate text from icon
+    },
+    placeholderText: {
+        color: '#9ca3af',
+    },
     checkboxGrid: { flexDirection: 'row', flexWrap: 'wrap' },
     checkboxContainer: { flexDirection: 'row', alignItems: 'center', width: '50%', marginBottom: 12 },
     checkboxBase: { width: 22, height: 22, borderWidth: 2, borderColor: '#3b82f6', borderRadius: 4, justifyContent: 'center', alignItems: 'center' },
