@@ -7,6 +7,7 @@ import { useNotification } from '../../context/NotificationContext';
 import { logActivity } from '../../services/activityLogger';
 import CalendarPickerModal from '../common/CalendarPickerModal';
 import Svg, { Path } from 'react-native-svg';
+import { Picker } from '@react-native-picker/picker';
 
 const CalendarIcon = () => <Svg width={20} height={20} viewBox="0 0 24 24" fill="none"><Path d="M8 7V3M16 4V3M7 11H17M5 21H19C20.1046 21 21 20.1046 21 19V7C21 5.89543 20.1046 5 19 5H5C3.89543 5 3 5.89543 3 7V19C3 20.1046 3.89543 21 5 21Z" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></Svg>;
 
@@ -69,8 +70,36 @@ export default function AddBnsInventoryModal({ onClose, onSave, mode = 'add', in
                 <Text style={styles.modalTitle}>{mode === 'edit' ? 'Edit Item' : 'Add New Item'}</Text>
                 <View style={styles.form}>
                     <View style={styles.inputGroup}><Text style={styles.label}>Item Name</Text><TextInput style={styles.input} placeholder="Enter item name" placeholderTextColor="#9ca3af" value={formData.item_name || ''} onChangeText={t => handleChange('item_name', t)} /></View>
-                    <View style={styles.inputGroup}><Text style={styles.label}>Category</Text><TextInput style={styles.input} placeholder="Medicines, Equipment, etc." placeholderTextColor="#9ca3af" value={formData.category || ''} onChangeText={t => handleChange('category', t)} /></View>
-                    <View style={styles.inputGroup}><Text style={styles.label}>Quantity</Text><TextInput style={styles.input} placeholder="Enter the Quantity" placeholderTextColor="#9ca3af" value={String(formData.quantity || '')} onChangeText={t => handleChange('quantity', t)} keyboardType="numeric" /></View>
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Category</Text>
+                        <View style={styles.pickerContainer}>
+                            <Picker
+                                selectedValue={formData.category || ''}
+                                onValueChange={(itemValue) => handleChange('category', itemValue)}
+                                style={styles.picker}
+                                dropdownIconColor="#9ca3af"
+                            >
+                                <Picker.Item label="Select a category..." value="" style={styles.pickerItem} />
+                                <Picker.Item label="Medicines" value="Medicines" style={styles.pickerItem} />
+                                <Picker.Item label="Nutrition & Feeding" value="Nutrition & Feeding" style={styles.pickerItem} />
+                                <Picker.Item label="Medical Supplies" value="Medical Supplies" style={styles.pickerItem} />
+                                <Picker.Item label="Vaccines" value="Vaccines" style={styles.pickerItem} />
+                                <Picker.Item label="Equipment" value="Equipment" style={styles.pickerItem} />
+                                <Picker.Item label="Child Hygiene & Care" value="Child Hygiene & Care" style={styles.pickerItem} />
+                            </Picker>
+                        </View>
+                    </View>
+                    <View style={styles.inputGroup}><Text style={styles.label}>Quantity</Text><TextInput 
+                                style={[styles.input, { color: '#111827' }]} 
+                                placeholder="Enter the Quantity." 
+                                placeholderTextColor="#9ca3af" 
+                                value={String(formData.quantity || '')} 
+                                onChangeText={t => {
+                                    const numericValue = t.replace(/[^0-9]/g, ''); // This regex removes any non-digit characters
+                                    handleChange('quantity', numericValue);
+                                }} 
+                                keyboardType="numeric" 
+                            /></View>
                     <View style={styles.inputGroup}><Text style={styles.label}>Manufacture Date</Text><TouchableOpacity style={styles.dateInput} placeholderTextColor="#9ca3af" onPress={() => { setCalendarField('manufacture_date'); setIsCalendarOpen(true); }}><Text style={styles.dateText}>{formData.manufacture_date || 'Select a date'}</Text><CalendarIcon /></TouchableOpacity></View>
                     <View style={styles.inputGroup}><Text style={styles.label}>Expiration Date</Text><TouchableOpacity style={styles.dateInput} placeholderTextColor="#9ca3af" onPress={() => { setCalendarField('expiration_date'); setIsCalendarOpen(true); }}><Text style={styles.dateText}>{formData.expiration_date || 'Select a date'}</Text><CalendarIcon /></TouchableOpacity></View>
                 </View>
@@ -91,7 +120,24 @@ const styles = StyleSheet.create({
     label: { fontSize: 14, fontWeight: '600', color: '#4b5563', marginBottom: 8 },
     input: { backgroundColor: '#f3f4f6', padding: 15, borderRadius: 10, fontSize: 16, borderWidth: 1, borderColor: '#e5e7eb', color: '#111827' },
     dateInput: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f3f4f6', paddingHorizontal: 15, paddingVertical: 15, borderRadius: 10, borderWidth: 1, borderColor: '#e5e7eb' },
-    dateText: { fontSize: 16 },
+    dateText: { fontSize: 16, color: '#9ca3af', },
+    pickerContainer: {
+        backgroundColor: '#f3f4f6',
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: '#e5e7eb',
+        justifyContent: 'center',
+        height: 58, // To match input padding
+    },
+    picker: {
+        height: 58,
+        width: '100%',
+        color: '#9ca3af',
+    },
+    pickerItem: {
+        fontSize: 16,
+        color: '#ffffffff',
+    },
     buttonContainer: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
     button: { flex: 1, padding: 15, borderRadius: 10, alignItems: 'center', backgroundColor: '#e5e7eb' },
     buttonText: { fontWeight: 'bold', fontSize: 16, color: '#374151' },

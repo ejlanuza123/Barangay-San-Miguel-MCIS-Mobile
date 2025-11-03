@@ -414,6 +414,6 @@ const styles = StyleSheet.create({
     picker: {
         height: 50,
         width: '100%',
-        color: '#111827'
+        color: '#9ca3af'
     },
 });

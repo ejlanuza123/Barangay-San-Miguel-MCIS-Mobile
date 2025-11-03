@@ -761,7 +761,7 @@ const styles = StyleSheet.create({
     picker: {
         height: 50,
         width: '100%',
-        color: '#53565cff',
+        color: '#9ca3af',
         backgroundColor: 'transparent',
     },
     pickerItem: {

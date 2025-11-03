@@ -5,8 +5,9 @@ import { supabase } from '../../services/supabase';
 import { useNotification } from '../../context/NotificationContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { logActivity } from '../../services/activityLogger';
-import CalendarPickerModal from '../common/CalendarPickerModal';// Make sure this path is correct
+import CalendarPickerModal from '../common/CalendarPickerModal';
 import Svg, { Path } from 'react-native-svg';
+import { Picker } from '@react-native-picker/picker';
 
 const CalendarIcon = () => <Svg width={20} height={20} viewBox="0 0 24 24" fill="none"><Path d="M8 7V3M16 4V3M7 11H17M5 21H19C20.1046 21 21 20.1046 21 19V7C21 5.89543 20.1046 5 19 5H5C3.89543 5 3 5.89543 3 7V19C3 20.1046 3.89543 21 5 21Z" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></Svg>;
 
@@ -98,12 +99,35 @@ export default function AddInventoryModal({ onClose, onSave, mode = 'add', initi
                     </View>
                     <View style={styles.inputGroup}>
                         <Text style={styles.label}>Category</Text>
-                        <TextInput style={[styles.input, { color: '#111827' }]} placeholder="Medicines, Equipment, etc." placeholderTextColor="#9ca3af" value={formData.category || ''} onChangeText={t => handleChange('category', t)} />
+                        <View style={styles.pickerContainer}>
+                            <Picker
+                                selectedValue={formData.category || ''}
+                                onValueChange={(itemValue) => handleChange('category', itemValue)}
+                                style={styles.picker}
+                                dropdownIconColor="#9ca3af"
+                            >
+                                <Picker.Item label="Select a category..." value="" style={styles.pickerItem} />
+                                <Picker.Item label="Medicines" value="Medicines" style={styles.pickerItem} />
+                                <Picker.Item label="Equipment" value="Equipment" style={styles.pickerItem} />
+                                <Picker.Item label="Vaccines" value="Vaccines" style={styles.pickerItem} />
+                                <Picker.Item label="Supplies" value="Supplies" style={styles.pickerItem} />
+                            </Picker>
+                        </View>
                     </View>
                     <View style={styles.row}>
                         <View style={[styles.inputGroup, {flex: 1}]}>
                             <Text style={styles.label}>Quantity</Text>
-                            <TextInput style={[styles.input, { color: '#111827' }]} placeholder="Enter the Quantity." placeholderTextColor="#9ca3af" value={String(formData.quantity || '')} onChangeText={t => handleChange('quantity', t)} keyboardType="numeric" />
+                            <TextInput 
+                                style={[styles.input, { color: '#111827' }]} 
+                                placeholder="Enter the Quantity." 
+                                placeholderTextColor="#9ca3af" 
+                                value={String(formData.quantity || '')} 
+                                onChangeText={t => {
+                                    const numericValue = t.replace(/[^0-9]/g, ''); 
+                                    handleChange('quantity', numericValue);
+                                }} 
+                                keyboardType="numeric" 
+                            />
                         </View>
                     </View>
                     <View style={styles.inputGroup}>
@@ -169,7 +193,24 @@ const styles = StyleSheet.create({
     },
     dateText: { 
         fontSize: 16, 
-        color: '#1f2937' 
+        color: '#9ca3af' 
+    },
+    pickerContainer: {
+        backgroundColor: '#f3f4f6',
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: '#e5e7eb',
+        justifyContent: 'center',
+        height: 58, // To match input padding
+    },
+    picker: {
+        height: 58,
+        width: '100%',
+        color: '#9ca3af',
+    },
+    pickerItem: {
+        fontSize: 16,
+        color: '#ffffffff',
     },
     buttonContainer: { 
         flexDirection: 'row', 

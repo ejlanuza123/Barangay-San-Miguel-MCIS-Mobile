@@ -384,7 +384,7 @@ const styles = StyleSheet.create({
     readOnlyInput: { backgroundColor: '#e5e7eb', color: '#6b7280' },
     row: { flexDirection: 'row', gap: 10 },
     dateInput: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f3f4f6', paddingHorizontal: 15, paddingVertical: 15, borderRadius: 10, borderWidth: 1, borderColor: '#e5e7eb' },
-    dateText: { fontSize: 16 },
+    dateText: { fontSize: 16, color: '#9ca3af',  },
     searchResultsContainer: {
         position: 'absolute',
         top: 80,
@@ -404,12 +404,11 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#e5e7eb',
         justifyContent: 'center',
+        color: '#9ca3af',
     },
     picker: {
-        // On Android, we remove the default underline by setting a background color
-        // On iOS, this style helps align the text. Height is needed for both.
         height: 54, 
-        backgroundColor: 'transparent',
+        color: '#9ca3af',
     },
     footer: { padding: 20, borderTopWidth: 1, borderColor: '#e5e7eb' },
     saveButton: { backgroundColor: '#22c55e', padding: 15, borderRadius: 10, alignItems: 'center' },

@@ -63,6 +63,7 @@ export default function BhwInventoryScreen() {
                 { label: 'All', onPress: () => { setActiveFilter('All'); setCurrentPage(1); } },
                 { label: 'Medicines', onPress: () => { setActiveFilter('Medicines'); setCurrentPage(1); } },
                 { label: 'Equipment', onPress: () => { setActiveFilter('Equipment'); setCurrentPage(1); } },
+                { label: 'Vaccines', onPress: () => setActiveFilter('Vaccines') },
                 { label: 'Supplies', onPress: () => { setActiveFilter('Supplies'); setCurrentPage(1); } },
             ].map(opt => ({...opt, onPress: () => { opt.onPress(); setIsFilterOpen(false); }}));
             setFilterOptions(options);
