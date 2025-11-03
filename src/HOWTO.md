@@ -9,7 +9,8 @@
 2.npm run android
 
 ### generate apk
-1. ./gradlew assembleRelease or gradlew assembleRelease
+1. cd android
+2. ./gradlew assembleRelease or gradlew assembleRelease
 
 ### hot fix
 1. npx expo-doctor
