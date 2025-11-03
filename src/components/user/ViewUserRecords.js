@@ -1,5 +1,4 @@
-// src/components/user/ViewUserRecords.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
@@ -24,16 +23,33 @@ const Field = ({ label, value }) => (
     </View>
 );
 
+// Helper to extract prefixed history items (e.g., "ph_", "hdh_")
+const extractHistory = (prefix, history) => {
+    if (!history) return {};
+    const items = {};
+    for (const key in history) {
+        if (key.startsWith(prefix)) {
+            const label = key.substring(prefix.length).replace(/_/g, ' '); // Clean up label
+            items[label] = history[key];
+        }
+    }
+    return items;
+};
+
 const HistoryList = ({ title, items }) => (
     <Section title={title}>
-        {Object.entries(items || {}).map(([key, value]) => (
-            <View key={key} style={styles.historyItem}>
-                <Text style={styles.historyText}>{key}</Text>
-                <Text style={[styles.historyValue, value ? styles.historyValueYes : styles.historyValueNo]}>
-                    {value ? 'Yes' : 'No'}
-                </Text>
-            </View>
-        ))}
+        {Object.entries(items).length > 0 ? (
+            Object.entries(items).map(([key, value]) => (
+                <View key={key} style={styles.historyItem}>
+                    <Text style={styles.historyText}>{key}</Text>
+                    <Text style={[styles.historyValue, value ? styles.historyValueYes : styles.historyValueNo]}>
+                        {value ? 'Yes' : 'No'}
+                    </Text>
+                </View>
+            ))
+        ) : (
+            <Text style={styles.fieldValue}>No data recorded.</Text>
+        )}
     </Section>
 );
 
@@ -54,12 +70,14 @@ const ProfileScene = ({ record }) => (
         </View>
 
         <Section title="Personal Information">
-            <Field label="Date of Birth" value={record?.dob} />
+            {/* These fields come from the top-level record */}
+            <Field label="Date of Birth" value={record?.medical_history?.dob} />
             <Field label="Age" value={record?.age} />
             <Field label="Blood Type" value={record?.medical_history?.blood_type} />
         </Section>
 
         <Section title="Contact & Address">
+            {/* These fields come from the top-level record */}
             <Field label="Contact No." value={record?.contact_no} />
             <Field label="Purok" value={record?.purok} />
             <Field label="Street" value={record?.street} />
@@ -67,61 +85,213 @@ const ProfileScene = ({ record }) => (
         </Section>
 
         <Section title="ID Numbers">
+            {/* These fields are inside medical_history */}
             <Field label="PhilHealth No." value={record?.medical_history?.philhealth_no} />
             <Field label="NHTS No." value={record?.medical_history?.nhts_no} />
         </Section>
         
         <Section title="Obstetrical Score">
-             {/* Assuming obstetrical_score is an object in medical_history */}
+            {/* These fields are inside medical_history */}
             <View style={styles.obScoreGrid}>
-                <Field label="G" value={record?.medical_history?.obstetrical_score?.g} />
-                <Field label="P" value={record?.medical_history?.obstetrical_score?.p} />
-                <Field label="T" value={record?.medical_history?.obstetrical_score?.term} />
-                <Field label="P" value={record?.medical_history?.obstetrical_score?.preterm} />
-                <Field label="A" value={record?.medical_history?.obstetrical_score?.abortion} />
-                <Field label="L" value={record?.medical_history?.obstetrical_score?.living} />
+                <Field label="G" value={record?.medical_history?.g_score} />
+                <Field label="P" value={record?.medical_history?.p_score} />
+                <Field label="T" value={record?.medical_history?.term} />
+                <Field label="P" value={record?.medical_history?.preterm} />
+                <Field label="A" value={record?.medical_history?.abortion} />
+                <Field label="L" value={record?.medical_history?.living_children} />
             </View>
         </Section>
     </ScrollView>
 );
+
+const PregnancyHistoryTable = ({ history }) => {
+    const gravidas = useMemo(() => Array.from({ length: 10 }, (_, i) => i + 1), []);
+    
+    // Filter out rows that are completely empty
+    const populatedRows = useMemo(() => gravidas.map(g => ({
+        g,
+        outcome: history[`g${g}_outcome`],
+        sex: history[`g${g}_sex`],
+        delivery: history[`g${g}_delivery_type`],
+        deliveredAt: history[`g${g}_delivered_at`],
+    })).filter(row => row.outcome || row.sex || row.delivery || row.deliveredAt), [history, gravidas]);
+
+    if (populatedRows.length === 0) {
+        return <Text style={styles.fieldValue}>No pregnancy history recorded.</Text>;
+    }
+
+    return (
+        <View style={styles.tableContainer}>
+            {/* Header Row */}
+            <View style={styles.tableHeader}>
+                <Text style={[styles.tableHeaderText, { flex: 0.6 }]}>G</Text>
+                <Text style={styles.tableHeaderText}>Outcome</Text>
+                <Text style={styles.tableHeaderText}>Sex</Text>
+                <Text style={styles.tableHeaderText}>NSD/CS</Text>
+                <Text style={styles.tableHeaderText}>Delivered At</Text>
+            </View>
+            {/* Data Rows */}
+            {populatedRows.map(row => (
+                <View style={styles.tableRow} key={row.g}>
+                    <Text style={styles.tableCellLabel}>G{row.g}</Text>
+                    <Text style={styles.tableCell}>{row.outcome}</Text>
+                    <Text style={styles.tableCell}>{row.sex}</Text>
+                    <Text style={styles.tableCell}>{row.delivery}</Text>
+                    <Text style={styles.tableCell}>{row.deliveredAt}</Text>
+                </View>
+            ))}
+        </View>
+    );
+};
 
 const PregnancyScene = ({ record }) => (
     <ScrollView contentContainerStyle={styles.sceneContent}>
         <Section title="Menstrual & OB History">
             <Field label="Last Menstrual Period (LMP)" value={record?.medical_history?.lmp} />
             <Field label="Expected Date of Confinement (EDC)" value={record?.medical_history?.edc} />
+            <Field label="Age of First Period" value={record?.medical_history?.age_first_period} />
             <Field label="Age of Menarche" value={record?.medical_history?.age_of_menarche} />
-             <Field label="Bleeding Amount" value={record?.medical_history?.bleeding_amount} />
+            <Field label="Bleeding Amount" value={record?.medical_history?.bleeding_amount} />
+            <Field label="Duration of Menstruation" value={record?.medical_history?.menstruation_duration} />
+            <Field label="Risk Level" value={record?.medical_history?.risk_level} />
         </Section>
         
         <Section title="Pregnancy History">
-            <Text style={styles.comingSoon}>Pregnancy history table coming soon.</Text>
+            <PregnancyHistoryTable history={record?.medical_history} />
         </Section>
     </ScrollView>
 );
 
-const MedicalScene = ({ record }) => (
-    <ScrollView contentContainerStyle={styles.sceneContent}>
-        <HistoryList title="Personal History" items={record?.medical_history?.personal_history} />
-        <HistoryList title="Hereditary Disease History" items={record?.medical_history?.hereditary_history} />
-        <HistoryList title="Social History" items={record?.medical_history?.social_history} />
-        
-        <Section title="Vaccination Record">
-             {/* Assuming vaccinations is an object in medical_history */}
-             {Object.entries(record?.medical_history?.vaccinations || {}).map(([vaccine, date]) => (
-                <Field key={vaccine} label={vaccine.toUpperCase()} value={date} />
-             ))}
-        </Section>
-    </ScrollView>
-);
+const MedicalScene = ({ record }) => {
+    // Use the helper to extract history objects
+    const personalHistory = useMemo(() => extractHistory('ph_', record?.medical_history), [record]);
+    const hereditaryHistory = useMemo(() => extractHistory('hdh_', record?.medical_history), [record]);
+    const socialHistory = useMemo(() => extractHistory('sh_', record?.medical_history), [record]);
+    
+    const vaccinations = useMemo(() => [
+        { label: 'TT1', value: record?.medical_history?.vaccine_tt1 },
+        { label: 'TT2', value: record?.medical_history?.vaccine_tt2 },
+        { label: 'TT3', value: record?.medical_history?.vaccine_tt3 },
+        { label: 'TT4', value: record?.medical_history?.vaccine_tt4 },
+        { label: 'TT5', value: record?.medical_history?.vaccine_tt5 },
+        { label: 'FIM', value: record?.medical_history?.vaccine_fim },
+    ], [record]);
 
-const TreatmentScene = ({ record }) => (
-     <ScrollView contentContainerStyle={styles.sceneContent}>
-        <Section title="Treatment & Records">
-            <Text style={styles.comingSoon}>Individual treatment records and consultation history will be displayed here in a future update.</Text>
-        </Section>
-    </ScrollView>
-);
+    return (
+        <ScrollView contentContainerStyle={styles.sceneContent}>
+            <HistoryList title="Personal History" items={personalHistory} />
+            <HistoryList title="Hereditary Disease History" items={hereditaryHistory} />
+            <HistoryList title="Social History" items={socialHistory} />
+            
+            <Section title="Allergies & Family Planning">
+                <Field label="Allergy History" value={record?.medical_history?.allergy_history} />
+                <Field label="Family Planning History" value={record?.medical_history?.family_planning_history} />
+            </Section>
+
+            <Section title="Vaccination Record">
+                {vaccinations.map(vax => (
+                    <Field key={vax.label} label={vax.label} value={vax.value} />
+                ))}
+            </Section>
+        </ScrollView>
+    );
+};
+
+const TreatmentScene = ({ record }) => {
+    const history = record?.medical_history || {};
+    
+    // --- Treatment Records ---
+    const treatmentHeaders = ['Date', 'Arrival', 'Departure', 'Ht.', 'Wt.', 'BP', 'MUAC', 'BMI', 'AOG', 'FH', 'FHB', 'LOC', 'Pres', 'Fe+FA', 'Admitted', 'Examined'];
+    const treatmentRows = useMemo(() => Array.from({ length: 5 }, (_, i) => i)
+        .map(rowIndex => {
+            const rowData = {};
+            let hasData = false;
+            for (const header of treatmentHeaders) {
+                const key = `tr_${rowIndex}_${header.toLowerCase()}`;
+                if (history[key]) {
+                    rowData[header] = history[key];
+                    hasData = true;
+                }
+            }
+            return hasData ? rowData : null;
+        })
+        .filter(Boolean), [history]); // Filter out null (empty) rows
+
+    // --- Pregnancy Outcomes ---
+    const outcomeHeaders = ['Date Terminated', 'Type of Delivery', 'Outcome', 'Sex of Child', 'Birth Weight (g)', 'Age in Weeks', 'Place of Birth', 'Attended By'];
+    const outcomeData = useMemo(() => {
+        let hasData = false;
+        const data = {};
+        for (const header of outcomeHeaders) {
+            const key = `outcome_${header.toLowerCase().replace(/ /g, '_').replace(/\(g\)/g, 'g')}`;
+            if (history[key]) {
+                data[header] = history[key];
+                hasData = true;
+            }
+        }
+        return hasData ? data : null;
+    }, [history]);
+
+    return (
+        <ScrollView contentContainerStyle={styles.sceneContent}>
+            
+            <Section title="Parental Individual Treatment Record">
+                <ScrollView horizontal>
+                    <View style={styles.tableContainer}>
+                        <View style={styles.horizontalTableHeader}>
+                            {treatmentHeaders.map(h => <Text key={h} style={styles.horizontalHeaderCell}>{h}</Text>)}
+                        </View>
+                        {treatmentRows.length > 0 ? (
+                            treatmentRows.map((row, rowIndex) => (
+                                <View key={rowIndex} style={styles.horizontalTableRow}>
+                                    {treatmentHeaders.map(header => (
+                                        <Text key={header} style={styles.horizontalTableCell}>{row[header] || 'N/A'}</Text>
+                                    ))}
+                                </View>
+                            ))
+                        ) : (
+                            <Text style={styles.fieldValue}>No treatment records found.</Text>
+                        )}
+                    </View>
+                </ScrollView>
+            </Section>
+
+            <Section title="Consultation and Referral Form">
+                <Field label="Date" value={history.consult_date} />
+                <Field label="Complaints" value={history.consult_complaints} />
+                <Field label="Referral Done For" value={history.consult_referral} />
+                <Field label="Doctor's Order" value={history.consult_orders} />
+                <Field label="Remarks" value={history.consult_remarks} />
+            </Section>
+
+            <Section title="Pregnancy Outcomes">
+                <ScrollView horizontal>
+                    <View style={styles.tableContainer}>
+                        <View style={styles.horizontalTableHeader}>
+                            {outcomeHeaders.map(h => <Text key={h} style={[styles.horizontalHeaderCell, { width: 120 }]}>{h}</Text>)}
+                        </View>
+                        {outcomeData ? (
+                            <View style={styles.horizontalTableRow}>
+                                {outcomeHeaders.map(header => (
+                                    <Text key={header} style={[styles.horizontalTableCell, { width: 120 }]}>{outcomeData[header] || 'N/A'}</Text>
+                                ))}
+                            </View>
+                        ) : (
+                            <Text style={styles.fieldValue}>No outcome data recorded.</Text>
+                        )}
+                    </View>
+                </ScrollView>
+            </Section>
+
+            <Section title="Micronutrient Supplementation">
+                <Field label="Iron Supplementation Date" value={history.micro_iron_date} />
+                <Field label="Iron Supplementation Amount" value={history.micro_iron_amount} />
+                <Field label="Vitamin A (200,000 IU) Date" value={history.micro_vita_date} />
+                <Field label="Vitamin A (200,000 IU) Amount" value={history.micro_vita_amount} />
+            </Section>
+        </ScrollView>
+    );
+};
 
 
 // --- Main ViewUserRecords Component ---
@@ -133,15 +303,16 @@ export default function ViewUserRecords() {
     const [index, setIndex] = useState(0);
     const [routes] = useState([
         { key: 'profile', title: 'Profile' },
-        { key: 'pregnancy', title: 'Pregnancy History' },
-        { key: 'medical', title: 'Medical History' },
-        { key: 'treatments', title: 'Treatments' },
+        { key: 'pregnancy', title: 'Pregnancy' },
+        { key: 'medical', title: 'Med History' },
+        { key: 'treatments', title: 'Records' },
     ]);
 
     useEffect(() => {
         const fetchRecord = async () => {
             if (!profile?.id) return;
             
+            setLoading(true);
             const { data, error } = await supabase
                 .from('patients')
                 .select('*')
@@ -151,6 +322,15 @@ export default function ViewUserRecords() {
             if (error) {
                 console.error("Error fetching patient record:", error);
             } else {
+                // Parse medical_history if it's a string
+                if (data && typeof data.medical_history === 'string') {
+                    try {
+                        data.medical_history = JSON.parse(data.medical_history);
+                    } catch (e) {
+                        console.error("Failed to parse medical_history:", e);
+                        data.medical_history = {}; // Set to empty object on parse failure
+                    }
+                }
                 setRecord(data);
             }
             setLoading(false);
@@ -158,7 +338,8 @@ export default function ViewUserRecords() {
         fetchRecord();
     }, [profile]);
 
-    const renderScene = ({ route }) => {
+    // Use useMemo for renderScene to prevent re-creation on every render
+    const renderScene = useMemo(() => ({ route }) => {
         if (loading) {
             return <ActivityIndicator size="large" color="#c026d3" style={{ marginTop: 50 }} />;
         }
@@ -177,7 +358,7 @@ export default function ViewUserRecords() {
             default:
                 return null;
         }
-    };
+    }, [loading, record]); // Re-create renderScene only if loading or record changes
     
     return (
         <SafeAreaView style={styles.container} edges={['bottom']}>
@@ -192,7 +373,7 @@ export default function ViewUserRecords() {
                         scrollEnabled
                         indicatorStyle={{ backgroundColor: '#c026d3' }}
                         style={{ backgroundColor: 'white' }}
-                        tabStyle={{ width: 'auto' }}
+                        tabStyle={{ width: 'auto', paddingHorizontal: 16 }} // Added padding
                         labelStyle={{ 
                             fontSize: 12, 
                             fontWeight: 'bold', 
@@ -223,17 +404,93 @@ const styles = StyleSheet.create({
     sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#9d174d', marginBottom: 15, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: '#fce7f3' },
     sectionContent: {},
     
-    fieldContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8 },
-    fieldLabel: { color: '#6b7280', fontSize: 14 },
-    fieldValue: { fontWeight: 'bold', color: '#374151', fontSize: 14 },
+    fieldContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingVertical: 8 },
+    fieldLabel: { color: '#6b7280', fontSize: 14, flex: 1 },
+    fieldValue: { fontWeight: 'bold', color: '#374151', fontSize: 14, flex: 1.5, textAlign: 'right' },
 
     obScoreGrid: { flexDirection: 'row', justifyContent: 'space-around' },
     
     historyItem: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 5 },
-    historyText: { fontSize: 14, color: '#374151' },
-    historyValue: { fontSize: 14, fontWeight: 'bold' },
+    historyText: { fontSize: 14, color: '#374151', flex: 1 },
+    historyValue: { fontSize: 14, fontWeight: 'bold', flex: 0.5, textAlign: 'right' },
     historyValueYes: { color: '#16a34a' },
     historyValueNo: { color: '#ef4444' },
 
-    comingSoon: { textAlign: 'center', color: '#6b7280', fontStyle: 'italic', paddingVertical: 20 },
+    // --- Pregnancy History Table ---
+    tableContainer: {
+        borderWidth: 1,
+        borderColor: '#d1d5db',
+        borderRadius: 8,
+        overflow: 'hidden',
+    },
+    tableHeader: {
+        flexDirection: 'row',
+        backgroundColor: '#f9fafb',
+        borderBottomWidth: 1,
+        borderColor: '#d1d5db',
+    },
+    tableRow: {
+        flexDirection: 'row',
+        borderBottomWidth: 1,
+        borderColor: '#e5e7eb',
+        alignItems: 'center',
+    },
+    tableHeaderText: {
+        flex: 1,
+        paddingVertical: 8,
+        paddingHorizontal: 4,
+        fontWeight: 'bold',
+        fontSize: 11,
+        color: '#374151',
+        textAlign: 'center',
+    },
+    tableCellLabel: {
+        flex: 0.6,
+        padding: 8,
+        fontSize: 12,
+        fontWeight: '600',
+        color: '#1f2937',
+        textAlign: 'center',
+    },
+    tableCell: {
+        flex: 1,
+        paddingVertical: 6,
+        paddingHorizontal: 4,
+        fontSize: 12,
+        color: '#111827',
+        borderLeftWidth: 1,
+        borderColor: '#e5e7eb',
+        textAlign: 'center',
+    },
+
+    // --- Horizontal Tables (Treatment & Outcome) ---
+    horizontalTableHeader: {
+        flexDirection: 'row',
+        backgroundColor: '#f9fafb',
+    },
+    horizontalHeaderCell: {
+        width: 90, // Fixed width
+        paddingVertical: 10,
+        paddingHorizontal: 5,
+        borderRightWidth: 1,
+        borderColor: '#d1d5db',
+        fontSize: 11,
+        fontWeight: 'bold',
+        color: '#374151',
+        textAlign: 'center',
+    },
+    horizontalTableRow: {
+        flexDirection: 'row',
+        borderTopWidth: 1,
+        borderColor: '#d1d5db',
+    },
+    horizontalTableCell: {
+        width: 90, // Must match header
+        padding: 8,
+        borderRightWidth: 1,
+        borderColor: '#e5e7eb',
+        fontSize: 11,
+        color: '#111827',
+        textAlign: 'center',
+    },
 });
