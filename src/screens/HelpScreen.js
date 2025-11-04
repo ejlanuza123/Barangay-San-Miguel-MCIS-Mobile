@@ -9,6 +9,8 @@ import {
   LayoutAnimation,
   Platform,
   UIManager,
+  Linking,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -114,7 +116,16 @@ const FaqItem = ({ question, answer, colors }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const toggleOpen = () => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    LayoutAnimation.configureNext({
+      duration: 300,
+      create: {
+        type: LayoutAnimation.Types.easeInEaseOut,
+        property: LayoutAnimation.Properties.opacity,
+      },
+      update: {
+        type: LayoutAnimation.Types.easeInEaseOut,
+      },
+    });
     setIsOpen(!isOpen);
   };
 
@@ -138,8 +149,59 @@ const FaqItem = ({ question, answer, colors }) => {
 // --- Main Screen Component ---
 export default function HelpScreen() {
   const navigation = useNavigation();
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const colors = getRoleColors(profile?.role || "BHW");
+
+  // Contact Support Function
+  const handleContactSupport = async () => {
+    try {
+      const supportEmail = 'support@sanmiguelmcis.com'; // Replace with your support email
+      const subject = `Support Request - ${profile?.role || 'User'}`;
+      const body = `
+Hello Support Team,
+
+I need assistance with the San Miguel MCIS Mobile App.
+
+User Details:
+- Name: ${profile?.full_name || 'Not provided'}
+- Role: ${profile?.role || 'Not provided'}
+- Email: ${user?.email || 'Not provided'}
+
+Issue Description:
+[Please describe your issue here]
+
+Thank you for your assistance.
+
+Best regards,
+${profile?.full_name || 'User'}
+      `.trim();
+
+      const emailUrl = `mailto:${supportEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      
+      const canOpen = await Linking.canOpenURL(emailUrl);
+      if (canOpen) {
+        await Linking.openURL(emailUrl);
+      } else {
+        Alert.alert(
+          'Email Not Available',
+          'Please set up an email client on your device to contact support.',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      Alert.alert(
+        'Error',
+        'Could not open email client. Please email us directly at support@sanmiguelmcis.com',
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
+  // Chat Assistant Function
+  const handleChatAssistant = () => {
+    // Make sure you have added the ChatAssistant screen to your navigation
+    navigation.navigate('ChatAssistant');
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
@@ -173,11 +235,23 @@ export default function HelpScreen() {
         <View style={styles.contactContainer}>
           <Text style={styles.contactTitle}>Still need help?</Text>
           <Text style={styles.contactText}>
-            If you can't find the answer you're looking for, please contact your
-            system administrator or reach out to our support team.
+            If you can't find the answer you're looking for, try our AI assistant or contact support.
           </Text>
-          <TouchableOpacity style={[styles.contactButton, { backgroundColor: colors.primary }]}>
-            <Text style={styles.contactButtonText}>Contact Support</Text>
+          
+          <TouchableOpacity 
+            style={[styles.chatButton, { backgroundColor: colors.primary }]}
+            onPress={handleChatAssistant}
+          >
+            <Text style={styles.chatButtonText}>💬 Chat with Assistant</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.contactButton, { borderColor: colors.primary }]}
+            onPress={handleContactSupport}
+          >
+            <Text style={[styles.contactButtonText, { color: colors.primary }]}>
+              Contact Human Support
+            </Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -272,14 +346,29 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginBottom: 20,
   },
+  chatButton: {
+    paddingVertical: 14,
+    paddingHorizontal: 30,
+    borderRadius: 10,
+    marginBottom: 12,
+    width: '100%',
+    alignItems: 'center',
+  },
+  chatButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   contactButton: {
     paddingVertical: 12,
     paddingHorizontal: 30,
-    borderRadius: 8,
+    borderRadius: 10,
+    borderWidth: 2,
+    width: '100%',
+    alignItems: 'center',
   },
   contactButtonText: {
-    color: "#fff",
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: '600',
   },
 });
