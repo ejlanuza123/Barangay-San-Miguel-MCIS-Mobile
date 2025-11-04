@@ -14,7 +14,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [isOnboardingComplete, setIsOnboardingComplete] = useState(false);
 
-  // 🔹 Helper: timeout wrapper to avoid long delays
+  // ✅ Helper function: timeout
   const withTimeout = (promise, ms) =>
     Promise.race([
       promise,
@@ -23,35 +23,59 @@ export const AuthProvider = ({ children }) => {
       ),
     ]);
 
-  // 🔹 Check if onboarding is complete
+  // ✅ Helper wrappers for SecureStore (to avoid 2048-byte limit)
+  const secureSave = async (key, value) => {
+    try {
+      await SecureStore.setItemAsync(key, value);
+    } catch (error) {
+      console.warn(`⚠️ SecureStore too large, fallback to AsyncStorage for ${key}`);
+      await AsyncStorage.setItem(key, value);
+    }
+  };
+
+  const secureGet = async (key) => {
+    try {
+      return await SecureStore.getItemAsync(key);
+    } catch (error) {
+      console.warn(`⚠️ SecureStore read failed, using AsyncStorage for ${key}`);
+      return await AsyncStorage.getItem(key);
+    }
+  };
+
+  const secureDelete = async (key) => {
+    try {
+      await SecureStore.deleteItemAsync(key);
+    } catch {
+      await AsyncStorage.removeItem(key);
+    }
+  };
+
+  // ✅ Check onboarding completion
   useEffect(() => {
     const checkOnboardingStatus = async () => {
       try {
-        const hasCompletedOnboarding = await AsyncStorage.getItem("hasCompletedOnboarding");
-        setIsOnboardingComplete(!!hasCompletedOnboarding);
-        console.log("📋 Onboarding status:", !!hasCompletedOnboarding);
+        const hasCompleted = await AsyncStorage.getItem("hasCompletedOnboarding");
+        setIsOnboardingComplete(!!hasCompleted);
+        console.log("📋 Onboarding status:", !!hasCompleted);
       } catch (error) {
         console.log("Error checking onboarding status:", error);
       }
     };
-    
     checkOnboardingStatus();
   }, []);
 
-  // 🔹 Load session on startup
+  // ✅ Load session on startup
   useEffect(() => {
     const loadSession = async () => {
       try {
-        // Fetch from SecureStore & NetInfo in parallel
-        const [sessionData, netInfo] = await Promise.all([
-          SecureStore.getItemAsync("supabase_session"),
+        const [storedSession, netInfo] = await Promise.all([
+          secureGet("supabase_session"),
           NetInfo.fetch(),
         ]);
-        const isConnected = netInfo.isConnected;
 
+        const isConnected = netInfo.isConnected;
         let activeSession = null;
 
-        // Try Supabase session only if online (with 3s timeout)
         if (isConnected) {
           try {
             const { data } = await withTimeout(supabase.auth.getSession(), 3000);
@@ -62,22 +86,30 @@ export const AuthProvider = ({ children }) => {
         }
 
         if (activeSession) {
-          // ✅ Supabase session is valid
-          setUser(activeSession.user);
-          await SecureStore.setItemAsync(
-            "supabase_session",
-            JSON.stringify(activeSession)
-          );
-        } else if (sessionData) {
-          // ✅ Use locally cached session (offline or expired)
-          const saved = JSON.parse(sessionData);
-          setUser(saved.user);
+          // ✅ Save only tokens securely
+          const minimalSession = {
+            access_token: activeSession.access_token,
+            refresh_token: activeSession.refresh_token,
+          };
 
-          if (isConnected) {
-            // Refresh session in background if online
-            supabase.auth.setSession(saved).catch((err) =>
-              console.log("⚠️ Background session restore failed:", err.message)
-            );
+          await secureSave("supabase_session", JSON.stringify(minimalSession));
+          await AsyncStorage.setItem("cached_user", JSON.stringify(activeSession.user));
+          setUser(activeSession.user);
+        } else if (storedSession) {
+          // ✅ Restore from saved tokens
+          const savedTokens = JSON.parse(storedSession);
+          const userData = await AsyncStorage.getItem("cached_user");
+          const savedUser = userData ? JSON.parse(userData) : null;
+
+          setUser(savedUser);
+
+          if (isConnected && savedTokens) {
+            supabase.auth
+              .setSession({
+                access_token: savedTokens.access_token,
+                refresh_token: savedTokens.refresh_token,
+              })
+              .catch((err) => console.log("⚠️ Background session restore failed:", err.message));
           } else {
             console.log("📴 Offline mode: using cached session.");
           }
@@ -93,24 +125,24 @@ export const AuthProvider = ({ children }) => {
 
     loadSession();
 
-    // 🔄 Watch for Supabase auth changes (login/logout)
+    // ✅ Listen for Supabase auth state changes
     const { data: listener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (session) {
+          const minimalSession = {
+            access_token: session.access_token,
+            refresh_token: session.refresh_token,
+          };
+          await secureSave("supabase_session", JSON.stringify(minimalSession));
+          await AsyncStorage.setItem("cached_user", JSON.stringify(session.user));
           setUser(session.user);
-          await SecureStore.setItemAsync(
-            "supabase_session",
-            JSON.stringify(session)
-          );
         } else if (event === "SIGNED_OUT") {
-          // Only clear auth data, preserve onboarding status
+          await secureDelete("supabase_session");
+          await AsyncStorage.removeItem("cached_user");
+          await secureDelete("cached_profile");
           setUser(null);
           setProfile(null);
-          await SecureStore.deleteItemAsync("supabase_session");
-          await SecureStore.deleteItemAsync("cached_profile");
-          
-          // Don't clear hasCompletedOnboarding here!
-          console.log("✅ Signed out, preserved onboarding status");
+          console.log("✅ Signed out, onboarding preserved");
         }
       }
     );
@@ -120,7 +152,7 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
-  // 🔹 Fetch or restore user profile
+  // ✅ Fetch or restore user profile
   useEffect(() => {
     const fetchProfile = async () => {
       if (!user) {
@@ -141,18 +173,14 @@ export const AuthProvider = ({ children }) => {
 
           if (error) {
             console.log("⚠️ Profile fetch error:", error.message);
-            const cached = await SecureStore.getItemAsync("cached_profile");
+            const cached = await secureGet("cached_profile");
             if (cached) setProfile(JSON.parse(cached));
           } else {
             setProfile(data);
-            await SecureStore.setItemAsync(
-              "cached_profile",
-              JSON.stringify(data)
-            );
+            await secureSave("cached_profile", JSON.stringify(data));
           }
         } else {
-          // Offline fallback
-          const cached = await SecureStore.getItemAsync("cached_profile");
+          const cached = await secureGet("cached_profile");
           if (cached) {
             console.log("📴 Loaded cached profile.");
             setProfile(JSON.parse(cached));
@@ -166,23 +194,24 @@ export const AuthProvider = ({ children }) => {
     fetchProfile();
   }, [user]);
 
-  // 🔹 Sign out handler
+  // ✅ Sign out handler
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
-      // Preserve onboarding status manually
-      const hasCompletedOnboarding = await SecureStore.getItemAsync("hasCompletedOnboarding");
-      if (hasCompletedOnboarding) setIsOnboardingComplete(true);
+      const hasCompleted = await AsyncStorage.getItem("hasCompletedOnboarding");
+      if (hasCompleted) setIsOnboardingComplete(true);
     } catch (e) {
       console.log("⚠️ Supabase sign-out error:", e.message);
-      await SecureStore.deleteItemAsync("supabase_session");
-      await SecureStore.deleteItemAsync("cached_profile");
     } finally {
+      await secureDelete("supabase_session");
+      await AsyncStorage.removeItem("cached_user");
+      await secureDelete("cached_profile");
       setUser(null);
       setProfile(null);
     }
   };
-  // 🔹 Render a loading splash while checking session
+
+  // ✅ Show loading screen
   if (loading) {
     return (
       <View
@@ -199,20 +228,22 @@ export const AuthProvider = ({ children }) => {
   }
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      profile, 
-      setProfile, 
-      loading, 
-      signOut,
-      isOnboardingComplete 
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        profile,
+        setProfile,
+        loading,
+        signOut,
+        isOnboardingComplete,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
 };
 
-// 🔹 Custom hook
+// ✅ Custom Hook
 export const useAuth = () => {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error("useAuth must be used within an AuthProvider");

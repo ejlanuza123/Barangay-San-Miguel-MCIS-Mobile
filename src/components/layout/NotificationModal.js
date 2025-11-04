@@ -206,7 +206,8 @@ export default function NotificationModal({
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: '#f8fafc' 
+    backgroundColor: '#f8fafc',
+    zIndex: 1000, 
   },
   header: {
     flexDirection: 'row',

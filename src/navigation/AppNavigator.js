@@ -12,6 +12,7 @@ import HelpScreen from "../screens/HelpScreen";
 // --- Import ALL screens for ALL roles ---
 // Layout
 import FixedHeader from "../components/layout/FixedHeader";
+import ChatAssistantScreen from "../screens/ChatAssistantScreen";
 // BHW Screens
 import BhwDashboardScreen from "../components/bhw/BhwDashboardScreen";
 import BhwAppointmentScreen from "../components/bhw/BhwAppointmentScreen";
@@ -376,6 +377,14 @@ const AppNavigator = () => {
         name="Help"
         component={HelpScreen}
         options={{ presentation: "modal" }}
+      />
+      <RootStack.Screen
+        name="ChatAssistant"
+        component={ChatAssistantScreen}
+        options={{ 
+          presentation: "modal",
+          title: 'Chat Assistant'
+        }}
       />
       <Stack.Screen
         name="ScheduleAppointment"

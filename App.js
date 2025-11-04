@@ -11,6 +11,7 @@ import { initDatabase } from './src/services/database';
 import OfflineIndicator from './src/components/layout/OfflineIndicator'; 
 import { SafeAreaProvider } from "react-native-safe-area-context"; 
 import { SoundSettingsProvider } from './src/context/SoundSettingsContext';
+import NotificationPortal from './src/components/layout/NotificationPortal';
 
 // Import all screens and navigators
 import OnboardingFlowScreen from "./src/screens/OnboardingFlowScreen";
@@ -136,6 +137,7 @@ export default function App() {
         <SoundSettingsProvider>
           <NotificationProvider>
             <RootNavigator dbInitialized={dbInitialized} />
+            <NotificationPortal />
           </NotificationProvider>
         </SoundSettingsProvider>   
       </AuthProvider>

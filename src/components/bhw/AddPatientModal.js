@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Modal } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Modal, FlatList } from 'react-native';
 import { supabase } from '../../services/supabase';
 import { useNotification } from '../../context/NotificationContext';
 import { logActivity } from '../../services/activityLogger';
@@ -202,30 +202,40 @@ const Step3 = React.memo(({ formData, handleChange }) => (
 
 // --- NEW MEMOIZED ROW COMPONENTS FOR STEP 4 ---
 const TreatmentRecordRow = React.memo(({ rowIndex, headers, formData, handleChange }) => {
-  const rowData = useMemo(() => {
-    return headers.map(header => ({
-      key: header,
-      value: formData[`tr_${rowIndex}_${header.toLowerCase()}`] || ''
-    }));
-  }, [formData, rowIndex, headers]);
+  const renderCell = useCallback((header) => {
+    const value = formData[`tr_${rowIndex}_${header.toLowerCase()}`] || '';
+    return (
+      <TextInput
+        style={styles.horizontalTableCell}
+        placeholderTextColor="#9ca3af"
+        value={value}
+        onChangeText={t => handleChange(`tr_${rowIndex}_${header.toLowerCase()}`, t)}
+      />
+    );
+  }, [formData, rowIndex, handleChange]);
 
   return (
     <View style={styles.horizontalTableRow}>
-      {rowData.map(({ key, value }) => (
-        <TextInput
-          key={`${key}-${rowIndex}`}
-          style={styles.horizontalTableCell}
-          placeholderTextColor="#9ca3af"
-          value={value}
-          onChangeText={t => handleChange(`tr_${rowIndex}_${key.toLowerCase()}`, t)}
-        />
+      {headers.map(header => (
+        <View key={`${header}-${rowIndex}`}>
+          {renderCell(header)}
+        </View>
       ))}
     </View>
   );
 }, (prevProps, nextProps) => {
-  // Custom comparison function
-  return prevProps.rowIndex === nextProps.rowIndex && 
-         JSON.stringify(prevProps.formData) === JSON.stringify(nextProps.formData);
+  // More efficient comparison
+  if (prevProps.rowIndex !== nextProps.rowIndex) return false;
+  
+  // Only check relevant form data for this specific row
+  const prevRowData = prevProps.headers.map(h => 
+    prevProps.formData[`tr_${prevProps.rowIndex}_${h.toLowerCase()}`] || ''
+  );
+  const nextRowData = nextProps.headers.map(h => 
+    nextProps.formData[`tr_${nextProps.rowIndex}_${h.toLowerCase()}`] || ''
+  );
+  
+  return JSON.stringify(prevRowData) === JSON.stringify(nextRowData);
 });
 
 const OutcomeRecordRow = React.memo(({ headers, formData, handleChange }) => {
@@ -250,11 +260,105 @@ const OutcomeRecordRow = React.memo(({ headers, formData, handleChange }) => {
     </View>
   );
 });
-// --- END OF NEW MEMOIZED COMPONENTS ---
-
 
 const Step4 = React.memo(({ formData, handleChange, setIsCalendarOpen, setCalendarField }) => {
+  const [isTreatmentModalOpen, setIsTreatmentModalOpen] = useState(false);
   const treatmentHeaders = useMemo(() => ['Date', 'Arrival', 'Departure', 'Ht.', 'Wt.', 'BP', 'MUAC', 'BMI', 'AOG', 'FH', 'FHB', 'LOC', 'Pres', 'Fe+FA', 'Admitted', 'Examined'], []);
+  
+  const openCalendar = useCallback((field) => {
+    setCalendarField(field);
+    setIsCalendarOpen(true);
+  }, [setCalendarField, setIsCalendarOpen]);
+
+  // Optimized row renderer for FlatList
+  const renderTreatmentRow = useCallback(({ index }) => (
+    <TreatmentRecordRow
+      rowIndex={index}
+      headers={treatmentHeaders}
+      formData={formData}
+      handleChange={handleChange}
+    />
+  ), [formData, handleChange, treatmentHeaders]);
+
+  const keyExtractor = useCallback((item, index) => `treatment-row-${index}`, []);
+
+  return (
+    <>
+      <Text style={styles.sectionTitle}>Vaccination & Treatment Records</Text>
+
+      {/* --- VACCINATION RECORD --- */}
+      <Text style={styles.subSectionTitle}>Vaccination Record</Text>
+      <View style={styles.vaccineTable}>
+        {['TT1', 'TT2', 'TT3', 'TT4', 'TT5', 'FIM'].map(vaccine => (
+          <VaccineRow
+            key={vaccine}
+            label={vaccine}
+            value={formData[`vaccine_${vaccine.toLowerCase()}`] || ''}
+            onPress={() => openCalendar(`vaccine_${vaccine.toLowerCase()}`)}
+          />
+        ))}
+      </View>
+
+      {/* --- PARENTAL INDIVIDUAL TREATMENT RECORD - NOW AS A BUTTON --- */}
+      <Text style={styles.subSectionTitle}>Parental Individual Treatment Record</Text>
+      <TouchableOpacity 
+        style={styles.treatmentButton}
+        onPress={() => setIsTreatmentModalOpen(true)}
+      >
+        <Text style={styles.treatmentButtonText}>Open Treatment Record</Text>
+        <Text style={styles.treatmentButtonSubtext}>Tap to view/edit treatment details</Text>
+      </TouchableOpacity>
+
+      {/* Treatment Record Modal */}
+      <Modal
+        visible={isTreatmentModalOpen}
+        animationType="slide"
+        onRequestClose={() => setIsTreatmentModalOpen(false)}
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity 
+              style={styles.modalBackButton}
+              onPress={() => setIsTreatmentModalOpen(false)}
+            >
+              <BackArrowIcon />
+              <Text style={styles.modalBackText}>Back</Text>
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Treatment Record</Text>
+            <View style={{ width: 70 }} />
+          </View>
+          
+          <View style={styles.modalContent}>
+            <Text style={styles.modalSectionTitle}>Parental Individual Treatment Record</Text>
+            <ScrollView horizontal={true}>
+              <View style={styles.horizontalTable}>
+                {/* Header */}
+                <View style={styles.horizontalTableHeader}>
+                  {treatmentHeaders.map(h => (
+                    <Text key={h} style={styles.horizontalHeaderCell}>{h}</Text>
+                  ))}
+                </View>
+                {/* Body - Using FlatList for better performance */}
+                <FlatList
+                  data={Array.from({ length: 5 })}
+                  renderItem={renderTreatmentRow}
+                  keyExtractor={keyExtractor}
+                  initialNumToRender={3} // Only render 3 initially
+                  maxToRenderPerBatch={3}
+                  windowSize={5}
+                  removeClippedSubviews={true}
+                  showsVerticalScrollIndicator={false}
+                />
+              </View>
+            </ScrollView>
+          </View>
+        </SafeAreaView>
+      </Modal>
+    </>
+  );
+});
+
+const Step5 = React.memo(({ formData, handleChange, setIsCalendarOpen, setCalendarField }) => {
   const outcomeHeaders = useMemo(() => ['Date Terminated', 'Type of Delivery', 'Outcome', 'Sex of Child', 'Birth Weight (g)', 'Age in Weeks', 'Place of Birth', 'Attended By'], []);
   
   const openCalendar = useCallback((field) => {
@@ -262,104 +366,71 @@ const Step4 = React.memo(({ formData, handleChange, setIsCalendarOpen, setCalend
     setIsCalendarOpen(true);
   }, [setCalendarField, setIsCalendarOpen]);
 
-    return (
-        <>
-            <Text style={styles.sectionTitle}>Vaccination & Records</Text>
+  return (
+    <>
+      <Text style={styles.sectionTitle}>Pregnancy Outcomes & Supplementation</Text>
 
-            {/* --- VACCINATION RECORD --- */}
-            <Text style={styles.subSectionTitle}>Vaccination Record</Text>
-            <View style={styles.vaccineTable}>
-                {['TT1', 'TT2', 'TT3', 'TT4', 'TT5', 'FIM'].map(vaccine => (
-                    <VaccineRow
-                        key={vaccine}
-                        label={vaccine}
-                        value={formData[`vaccine_${vaccine.toLowerCase()}`] || ''}
-                        onPress={() => openCalendar(`vaccine_${vaccine.toLowerCase()}`)}
-                    />
-                ))}
-            </View>
+      {/* --- PREGNANCY OUTCOMES --- */}
+      <Text style={styles.subSectionTitle}>Pregnancy Outcomes</Text>
+      <ScrollView horizontal={true} contentContainerStyle={styles.horizontalScroll}>
+        <View style={styles.horizontalTable}>
+          {/* Header */}
+          <View style={styles.horizontalTableHeader}>
+            {outcomeHeaders.map(h => <Text key={h} style={[styles.horizontalHeaderCell, { width: 120 }]}>{h}</Text>)}
+          </View>
+          {/* Body (Only 1 row for this table) */}
+          <OutcomeRecordRow
+            headers={outcomeHeaders}
+            formData={formData}
+            handleChange={handleChange}
+          />
+        </View>
+      </ScrollView>
 
-            {/* --- PARENTAL INDIVIDUAL TREATMENT RECORD --- */}
-            <Text style={styles.subSectionTitle}>Parental Individual Treatment Record</Text>
-            <ScrollView horizontal={true} contentContainerStyle={styles.horizontalScroll}>
-                <View style={styles.horizontalTable}>
-                    {/* Header */}
-                    <View style={styles.horizontalTableHeader}>
-                        {treatmentHeaders.map(h => <Text key={h} style={styles.horizontalHeaderCell}>{h}</Text>)}
-                    </View>
-                    {/* Body */}
-                    {Array.from({ length: 5 }).map((_, rowIndex) => (
-                        <TreatmentRecordRow // <-- Using memoized row
-                            key={rowIndex}
-                            rowIndex={rowIndex}
-                            headers={treatmentHeaders}
-                            formData={formData}
-                            handleChange={handleChange}
-                        />
-                    ))}
-                </View>
-            </ScrollView>
-            {/* --- PREGNANCY OUTCOMES --- */}
-            <Text style={styles.subSectionTitle}>Pregnancy Outcomes</Text>
-            <ScrollView horizontal={true} contentContainerStyle={styles.horizontalScroll}>
-                <View style={styles.horizontalTable}>
-                    {/* Header */}
-                    <View style={styles.horizontalTableHeader}>
-                        {outcomeHeaders.map(h => <Text key={h} style={[styles.horizontalHeaderCell, { width: 120 }]}>{h}</Text>)}
-                    </View>
-                    {/* Body (Only 1 row for this table) */}
-                    <OutcomeRecordRow // <-- Using memoized row
-                        headers={outcomeHeaders}
-                        formData={formData}
-                        handleChange={handleChange}
-                    />
-                </View>
-            </ScrollView>
-
-            {/* --- MICRONUTRIENT SUPPLEMENTATION --- */}
-            <Text style={styles.subSectionTitle}>Micronutrient Supplementation</Text>
-            <View style={styles.microTable}>
-                {/* Header */}
-                <View style={styles.microHeader}>
-                    <Text style={[styles.microHeaderText, { flex: 2 }]}>Supplementation Type</Text>
-                    <Text style={styles.microHeaderText}>Date Given</Text>
-                    <Text style={styles.microHeaderText}>Amount Given</Text>
-                </View>
-                {/* Iron Row */}
-                <View style={styles.microRow}>
-                    <Text style={[styles.microCell, { flex: 2, fontWeight: '500' }]}>Iron Supplementation / Ferrous Sulfate</Text>
-                    <TouchableOpacity style={styles.microDateCell} onPress={() => openCalendar('micro_iron_date')}>
-                        <Text style={[styles.inputText, !formData.micro_iron_date && styles.placeholderText]}>
-                            {formData.micro_iron_date || 'Date'}
-                        </Text>
-                    </TouchableOpacity>
-                    <TextInput
-                        style={styles.microInputCell}
-                        placeholder="Amount"
-                        placeholderTextColor="#9ca3af"
-                        value={formData.micro_iron_amount || ''}
-                        onChangeText={t => handleChange('micro_iron_amount', t)}
-                    />
-                </View>
-                {/* Vitamin A Row */}
-                <View style={styles.microRow}>
-                    <Text style={[styles.microCell, { flex: 2, fontWeight: '500' }]}>Vitamin A (200,000 IU)</Text>
-                    <TouchableOpacity style={styles.microDateCell} onPress={() => openCalendar('micro_vita_date')}>
-                        <Text style={[styles.inputText, !formData.micro_vita_date && styles.placeholderText]}>
-                            {formData.micro_vita_date || 'Date'}
-                        </Text>
-                    </TouchableOpacity>
-                    <TextInput
-                        style={styles.microInputCell}
-                        placeholder="Amount"
-                        placeholderTextColor="#9ca3af"
-                        value={formData.micro_vita_amount || ''}
-                        onChangeText={t => handleChange('micro_vita_amount', t)}
-                    />
-                </View>
-            </View>
-        </>
-    );
+      {/* --- MICRONUTRIENT SUPPLEMENTATION --- */}
+      <Text style={styles.subSectionTitle}>Micronutrient Supplementation</Text>
+      <View style={styles.microTable}>
+        {/* Header */}
+        <View style={styles.microHeader}>
+          <Text style={[styles.microHeaderText, { flex: 2 }]}>Supplementation Type</Text>
+          <Text style={styles.microHeaderText}>Date Given</Text>
+          <Text style={styles.microHeaderText}>Amount Given</Text>
+        </View>
+        {/* Iron Row */}
+        <View style={styles.microRow}>
+          <Text style={[styles.microCell, { flex: 2, fontWeight: '500' }]}>Iron Supplementation / Ferrous Sulfate</Text>
+          <TouchableOpacity style={styles.microDateCell} onPress={() => openCalendar('micro_iron_date')}>
+            <Text style={[styles.inputText, !formData.micro_iron_date && styles.placeholderText]}>
+              {formData.micro_iron_date || 'Date'}
+            </Text>
+          </TouchableOpacity>
+          <TextInput
+            style={styles.microInputCell}
+            placeholder="Amount"
+            placeholderTextColor="#9ca3af"
+            value={formData.micro_iron_amount || ''}
+            onChangeText={t => handleChange('micro_iron_amount', t)}
+          />
+        </View>
+        {/* Vitamin A Row */}
+        <View style={styles.microRow}>
+          <Text style={[styles.microCell, { flex: 2, fontWeight: '500' }]}>Vitamin A (200,000 IU)</Text>
+          <TouchableOpacity style={styles.microDateCell} onPress={() => openCalendar('micro_vita_date')}>
+            <Text style={[styles.inputText, !formData.micro_vita_date && styles.placeholderText]}>
+              {formData.micro_vita_date || 'Date'}
+            </Text>
+          </TouchableOpacity>
+          <TextInput
+            style={styles.microInputCell}
+            placeholder="Amount"
+            placeholderTextColor="#9ca3af"
+            value={formData.micro_vita_amount || ''}
+            onChangeText={t => handleChange('micro_vita_amount', t)}
+          />
+        </View>
+      </View>
+    </>
+  );
 });
 
 const PregnancyHistoryTable = React.memo(({ formData, handleChange }) => {
@@ -386,33 +457,30 @@ const PregnancyHistoryTable = React.memo(({ formData, handleChange }) => {
                         value={formData[`g${g}_outcome`] || ''}
                         onChangeText={t => handleChange(`g${g}_outcome`, t)}
                         placeholderTextColor="#9ca3af"
+                        placeholder="Outcome"
                     />
                     
-                    <View style={styles.tablePickerWrapper}>
-                        <Picker
-                            style={styles.tablePicker}
-                            selectedValue={formData[`g${g}_sex`] || ''}
-                            onValueChange={itemValue => handleChange(`g${g}_sex`, itemValue)}
-                            dropdownIconColor="#6b7280"
-                            prompt="Select Sex"
-                        >
-                            <Picker.Item label="Sex" value="" style={styles.tablePickerItem} />
-                            <Picker.Item label="M" value="Male" style={styles.tablePickerItem} />
-                            <Picker.Item label="F" value="Female" style={styles.tablePickerItem} />
-                        </Picker>
-                    </View>
+                    <TextInput
+                        style={styles.tableCellInput}
+                        value={formData[`g${g}_sex`] || ''}
+                        onChangeText={t => handleChange(`g${g}_sex`, t)}
+                        placeholderTextColor="#9ca3af"
+                        placeholder="M/F"
+                    />
 
                     <TextInput
                         style={styles.tableCellInput}
                         value={formData[`g${g}_delivery_type`] || ''}
                         onChangeText={t => handleChange(`g${g}_delivery_type`, t)}
                         placeholderTextColor="#9ca3af"
+                        placeholder="NSD/CS"
                     />
                     <TextInput
                         style={styles.tableCellInput}
                         value={formData[`g${g}_delivered_at`] || ''}
                         onChangeText={t => handleChange(`g${g}_delivered_at`, t)}
                         placeholderTextColor="#9ca3af"
+                        placeholder="Location"
                     />
                 </View>
             ))}
@@ -690,7 +758,7 @@ export default function AddPatientModal({ onClose, onSave, mode = 'add', initial
                     <Text style={styles.headerTitle}>
                         {mode === 'edit' ? 'Update Patient Record' : 'New Patient Record'}
                     </Text>
-                    <Text style={styles.stepIndicator}>Step {step} of 4</Text>
+                    <Text style={styles.stepIndicator}>Step {step} of 5</Text>
                 </View>
                 <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
                     <View style={styles.profileSection}>
@@ -711,15 +779,24 @@ export default function AddPatientModal({ onClose, onSave, mode = 'add', initial
                     {step === 2 && <Step2 formData={formData} handleChange={handleChange} setIsCalendarOpen={setIsCalendarOpen} setCalendarField={setCalendarField} />}
                     {step === 3 && <Step3 formData={formData} handleChange={handleChange} />}
                     {step === 4 && <Step4 formData={formData} handleChange={handleChange} setIsCalendarOpen={setIsCalendarOpen} setCalendarField={setCalendarField} />}
+                    {step === 5 && <Step5 formData={formData} handleChange={handleChange} setIsCalendarOpen={setIsCalendarOpen} setCalendarField={setCalendarField} />}
                 </ScrollView>
                 <View style={styles.footer}>
-                    {step > 1 && <TouchableOpacity style={styles.navButton} onPress={() => setStep(step - 1)}><Text style={styles.navButtonText}>Previous</Text></TouchableOpacity>}
-                    {step < 4 && <TouchableOpacity style={styles.navButton} onPress={() => setStep(step + 1)}><Text style={styles.navButtonText}>Next</Text></TouchableOpacity>}
-                    {step === 4 && (
-                        <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={loading}>
-                            {loading ? <ActivityIndicator color="white" /> : <Text style={styles.saveButtonText}>Confirm & Save</Text>}
-                        </TouchableOpacity>
-                    )}
+                {step > 1 && (
+                    <TouchableOpacity style={styles.navButton} onPress={() => setStep(step - 1)}>
+                    <Text style={styles.navButtonText}>Previous</Text>
+                    </TouchableOpacity>
+                )}
+                {step < 5 && (
+                    <TouchableOpacity style={styles.navButton} onPress={() => setStep(step + 1)}>
+                    <Text style={styles.navButtonText}>Next</Text>
+                    </TouchableOpacity>
+                )}
+                {step === 5 && (
+                    <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={loading}>
+                    {loading ? <ActivityIndicator color="white" /> : <Text style={styles.saveButtonText}>Confirm & Save</Text>}
+                    </TouchableOpacity>
+                )}
                 </View>
             </SafeAreaView>
         </>
@@ -847,7 +924,7 @@ const styles = StyleSheet.create({
     },
     tablePickerItem: {
         fontSize: 12, // For iOS picker items
-        color: '#111827', // Changed from white
+        color: '#ffffffff', // Changed from white
     },
     vaccineTable: {
         borderWidth: 1,
@@ -975,5 +1052,67 @@ const styles = StyleSheet.create({
         borderLeftWidth: 1,
         borderColor: '#e5e7eb',
         color: '#111827',
+    },
+    // Add these to your existing styles
+    treatmentButton: {
+    backgroundColor: '#3b82f6',
+    padding: 16,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginBottom: 15,
+    },
+    treatmentButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 4,
+    },
+    treatmentButtonSubtext: {
+    color: '#dbeafe',
+    fontSize: 12,
+    },
+    modalContainer: {
+    flex: 1,
+    backgroundColor: 'white',
+    },
+    modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 15,
+    borderBottomWidth: 1,
+    borderColor: '#e5e7eb',
+    },
+    modalBackButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 5,
+    },
+    modalBackText: {
+    marginLeft: 8,
+    fontSize: 16,
+    color: '#374151',
+    },
+    modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    },
+    modalContent: {
+    padding: 20,
+    },
+    modalSectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    marginBottom: 15,
+    textAlign: 'center',
+    },
+    modalContent: {
+    flex: 1,
+    padding: 10,
+    },
+    horizontalTable: {
+    minWidth: 1440, // 16 columns * 90 width
     },
 });

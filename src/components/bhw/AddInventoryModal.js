@@ -158,7 +158,7 @@ export default function AddInventoryModal({ onClose, onSave, mode = 'add', initi
 }
 
 const styles = StyleSheet.create({
-    modalContainer: { flex: 1, justifyContent: 'center', padding: 20, backgroundColor: 'white' },
+    modalContainer: { flex: 1, justifyContent: 'center', padding: 20, backgroundColor: 'white', zIndex: 1000, },
     modalTitle: { fontSize: 24, fontWeight: 'bold', textAlign: 'center', marginBottom: 20 },
     form: { flex: 1 },
     row: { flexDirection: 'row', gap: 10 },

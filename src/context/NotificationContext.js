@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
         bottom: 95,
         right: 10,
         left: 10,
-        zIndex: 1000,
+        zIndex: 10000,
         alignItems: 'center',
     }
 });
