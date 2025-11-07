@@ -244,7 +244,7 @@ export default function FixedHeader() {
 }
 
 const styles = StyleSheet.create({
-  fixedHeaderContainer: { paddingBottom: 10 },
+  fixedHeaderContainer: { paddingBottom: 10, borderRadius: 25,   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
