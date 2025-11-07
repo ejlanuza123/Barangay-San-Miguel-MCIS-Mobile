@@ -7,6 +7,7 @@ import QRCode from 'react-native-qrcode-svg';
 
 // --- ICONS & HELPER COMPONENTS ---
 const BackArrowIcon = () => <Svg width="24" height="24" viewBox="0 0 24 24" fill="none"><Path d="M15 18L9 12L15 6" stroke="#333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></Svg>;
+
 const CheckboxDisplay = ({ label, isChecked }) => (
     <View style={styles.checkboxContainer}>
         <View style={[styles.checkboxBase, isChecked && styles.checkboxChecked]}>
@@ -15,16 +16,48 @@ const CheckboxDisplay = ({ label, isChecked }) => (
         <Text style={styles.checkboxLabel}>{label}</Text>
     </View>
 );
+
 const Field = ({ label, value }) => (
     <View style={styles.fieldContainer}>
         <Text style={styles.fieldLabel}>{label}</Text>
-        <Text style={styles.fieldValue}>{value || 'N/A'}</Text>
+        <Text style={styles.fieldValue}>
+            {value && value.toString().trim() !== '' ? value : 'N/A'}
+        </Text>
     </View>
 );
+
 const SectionHeader = ({ title }) => <Text style={styles.sectionTitle}>{title}</Text>;
 
 export default function ViewPatientModal({ patient, onClose }) {
-    const details = patient.medical_history || {};
+    // Parse the medical_history JSON string if it exists, otherwise use empty object
+    const medicalHistory = patient.medical_history 
+        ? (typeof patient.medical_history === 'string' 
+            ? JSON.parse(patient.medical_history) 
+            : patient.medical_history)
+        : {};
+
+    // Combine patient data with medical history for easy access
+    const details = {
+        ...patient,
+        ...medicalHistory
+    };
+
+    // Debug logs to check data
+    console.log('Patient data:', patient);
+    console.log('Middle name:', patient.middle_name);
+    console.log('All patient keys:', Object.keys(patient));
+
+    // Format full name with middle name
+    const getFullName = () => {
+        const firstName = patient.first_name || '';
+        const middleName = patient.middle_name || '';
+        const lastName = patient.last_name || '';
+        
+        if (middleName.trim()) {
+            return `${firstName} ${middleName} ${lastName}`;
+        }
+        return `${firstName} ${lastName}`;
+    };
 
     return (
         <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -46,7 +79,7 @@ export default function ViewPatientModal({ patient, onClose }) {
                             />
                         ) : null}
                     </View>
-                    <Text style={styles.profileName}>{`${patient.first_name} ${patient.last_name}`}</Text>
+                    <Text style={styles.profileName}>{getFullName()}</Text>
                     <Text style={styles.patientId}>ID: {patient.patient_id}</Text>
                 </View>
 
@@ -61,7 +94,7 @@ export default function ViewPatientModal({ patient, onClose }) {
                     <View style={styles.row}>
                         <Field label="Date of Birth" value={details.dob} />
                         <Field label="Blood Type" value={details.blood_type} />
-                        <Field label="Age" value={patient.age} />
+                        <Field label="Age" value={patient.age?.toString()} />
                     </View>
                 </View>
 
@@ -91,8 +124,16 @@ export default function ViewPatientModal({ patient, onClose }) {
                 <SectionHeader title="Address" />
                 <View style={styles.card}>
                     <View style={styles.row}>
-                        <Field label="Purok" value={details.purok} />
-                        <Field label="Street" value={details.street} />
+                        <Field label="Purok" value={patient.purok} />
+                        <Field label="Street" value={patient.street} />
+                    </View>
+                </View>
+
+                {/* Risk Level */}
+                <SectionHeader title="Risk Assessment" />
+                <View style={styles.card}>
+                    <View style={styles.row}>
+                        <Field label="Risk Level" value={patient.risk_level} />
                     </View>
                 </View>
 
@@ -152,6 +193,9 @@ export default function ViewPatientModal({ patient, onClose }) {
                         <Field label="Age of Menarche" value={details.age_of_menarche} />
                         <Field label="Amount of Bleeding" value={details.bleeding_amount} />
                         <Field label="Duration of Menstruation (days)" value={details.menstruation_duration} />
+                    </View>
+                    <View style={styles.row}>
+                        <Field label="Risk Level" value={details.risk_level} />
                     </View>
                 </View>
 
@@ -217,11 +261,15 @@ export default function ViewPatientModal({ patient, onClose }) {
                             </View>
                             {Array.from({ length: 5 }).map((_, rowIndex) => (
                                 <View key={rowIndex} style={styles.treatmentRow}>
-                                    {Array.from({ length: 16 }).map((_, colIndex) => (
-                                        <Text key={colIndex} style={styles.treatmentCell}>
-                                            {details[`treatment_${rowIndex}_${colIndex}`] || '-'}
-                                        </Text>
-                                    ))}
+                                    {Array.from({ length: 16 }).map((_, colIndex) => {
+                                        const header = ['Date', 'Arrival', 'Departure', 'Ht.', 'Wt.', 'BP', 'MUAC', 'BMI', 'AOG', 'FH', 'FHB', 'LOC', 'Pres', 'Fe+FA', 'Admitted', 'Examined'][colIndex];
+                                        const fieldName = `tr_${rowIndex}_${header.toLowerCase()}`;
+                                        return (
+                                            <Text key={colIndex} style={styles.treatmentCell}>
+                                                {details[fieldName] || '-'}
+                                            </Text>
+                                        );
+                                    })}
                                 </View>
                             ))}
                         </View>
@@ -249,11 +297,14 @@ export default function ViewPatientModal({ patient, onClose }) {
                                 ))}
                             </View>
                             <View style={styles.treatmentRow}>
-                                {Array.from({ length: 8 }).map((_, index) => (
-                                    <Text key={index} style={styles.treatmentCell}>
-                                        {details[`outcome_${index}`] || '-'}
-                                    </Text>
-                                ))}
+                                {['Date Terminated', 'Type of Delivery', 'Outcome', 'Sex of Child', 'Birth Weight (g)', 'Age in Weeks', 'Place of Birth', 'Attended By'].map((header, index) => {
+                                    const fieldName = `outcome_${header.toLowerCase().replace(/ /g, '_')}`;
+                                    return (
+                                        <Text key={index} style={styles.treatmentCell}>
+                                            {details[fieldName] || '-'}
+                                        </Text>
+                                    );
+                                })}
                             </View>
                         </View>
                     </ScrollView>
@@ -271,13 +322,13 @@ export default function ViewPatientModal({ patient, onClose }) {
                             </View>
                             <View style={styles.treatmentRow}>
                                 <Text style={styles.treatmentCell}>Iron Supplementation / Ferrous Sulfate</Text>
-                                <Text style={styles.treatmentCell}>{details.iron_date || '-'}</Text>
-                                <Text style={styles.treatmentCell}>{details.iron_amount || '-'}</Text>
+                                <Text style={styles.treatmentCell}>{details.micro_iron_date || '-'}</Text>
+                                <Text style={styles.treatmentCell}>{details.micro_iron_amount || '-'}</Text>
                             </View>
                             <View style={styles.treatmentRow}>
                                 <Text style={styles.treatmentCell}>Vitamin A (200,000 IU)</Text>
-                                <Text style={styles.treatmentCell}>{details.vitamin_a_date || '-'}</Text>
-                                <Text style={styles.treatmentCell}>{details.vitamin_a_amount || '-'}</Text>
+                                <Text style={styles.treatmentCell}>{details.micro_vita_date || '-'}</Text>
+                                <Text style={styles.treatmentCell}>{details.micro_vita_amount || '-'}</Text>
                             </View>
                         </View>
                     </ScrollView>
@@ -311,6 +362,7 @@ const styles = StyleSheet.create({
         fontSize: 22,
         fontWeight: 'bold',
         color: '#1f2937',
+        textAlign: 'center',
     },
     patientId: {
         fontSize: 14,

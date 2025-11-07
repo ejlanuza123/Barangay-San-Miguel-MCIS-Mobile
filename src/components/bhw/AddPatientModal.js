@@ -351,6 +351,14 @@ const Step4 = React.memo(({ formData, handleChange, setIsCalendarOpen, setCalend
                 />
               </View>
             </ScrollView>
+
+            {/* OK Button */}
+            <TouchableOpacity 
+              style={styles.okButton}
+              onPress={() => setIsTreatmentModalOpen(false)}
+            >
+              <Text style={styles.okButtonText}>OK</Text>
+            </TouchableOpacity>
           </View>
         </SafeAreaView>
       </Modal>
@@ -524,8 +532,7 @@ export default function AddPatientModal({ onClose, onSave, mode = 'add', initial
                 last_name: initialData.last_name, first_name: initialData.first_name,
                 middle_name: initialData.middle_name, age: initialData.age?.toString(),
                 contact_no: initialData.contact_no,
-                dob: initialData.medical_history?.dob || '',
-                purok: initialData.purok || '', // Add this line
+                purok: initialData.purok || '', 
                 street: initialData.street || ''
             }));
         } else {
@@ -1098,21 +1105,39 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#1f2937',
     },
+    okButton: {
+    backgroundColor: '#3b82f6',
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 10,
+    alignSelf: 'center',
+    minWidth: 100,
+    },
+    okButtonText: {
+        color: 'white',
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    
     modalContent: {
-    padding: 20,
+        flex: 1,
+        padding: 10,
     },
-    modalSectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1f2937',
-    marginBottom: 15,
-    textAlign: 'center',
+        modalSectionTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#1f2937',
+        marginBottom: 15,
+        textAlign: 'center',
     },
-    modalContent: {
-    flex: 1,
-    padding: 10,
+        modalContent: {
+        flex: 1,
+        padding: 10,
     },
-    horizontalTable: {
-    minWidth: 1440, // 16 columns * 90 width
+        horizontalTable: {
+        minWidth: 1440, 
     },
 });
