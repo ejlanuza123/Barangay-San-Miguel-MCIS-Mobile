@@ -8,6 +8,8 @@ import { HeaderProvider } from "../context/HeaderContext";
 import PrivacyPolicyScreen from "../screens/PrivacyPolicyScreen";
 import AboutScreen from "../screens/AboutScreen";
 import HelpScreen from "../screens/HelpScreen";
+import FloatingChatIcon from "../components/layout/FloatingChatIcon";
+import { View } from "react-native";
 
 // --- Import ALL screens for ALL roles ---
 // Layout
@@ -139,44 +141,44 @@ const UserStack = () => (
 );
 // --- Stacks for BHW & BNS (These are complete now) ---
 const BhwStack = () => (
-  <Stack.Navigator
-    screenOptions={{
-      header: () => <FixedHeader />,
-      contentStyle: { backgroundColor: "#f0f4f8" },
-    }}
-  >
-    <Stack.Screen name="BhwDashboard" component={BhwDashboardScreen} />
-    <Stack.Screen
-      name="PatientManagement"
-      component={PatientManagementScreen}
-    />
-    <Stack.Screen name="BhwAppointment" component={BhwAppointmentScreen} />
-    <Stack.Screen name="BhwInventory" component={BhwInventoryScreen} />
-    <Stack.Screen name="BhwReports" component={BhwReportsScreen} />
-    <Stack.Screen
-      name="BhwViewReport"
-      component={BhwViewReportScreen}
-      options={{ headerShown: false }}
-    />
-  </Stack.Navigator>
+  <View style={{ flex: 1 }}>
+    <Stack.Navigator
+      screenOptions={{
+        header: () => <FixedHeader />,
+        contentStyle: { backgroundColor: "#f0f4f8" },
+      }}
+    >
+      <Stack.Screen name="BhwDashboard" component={BhwDashboardScreen} />
+      <Stack.Screen name="PatientManagement" component={PatientManagementScreen} />
+      <Stack.Screen name="BhwAppointment" component={BhwAppointmentScreen} />
+      <Stack.Screen name="BhwInventory" component={BhwInventoryScreen} />
+      <Stack.Screen name="BhwReports" component={BhwReportsScreen} />
+      <Stack.Screen
+        name="BhwViewReport"
+        component={BhwViewReportScreen}
+        options={{ headerShown: false }}
+      />
+    </Stack.Navigator>
+    <FloatingChatIcon />
+  </View>
 );
 
 const BnsStack = () => (
-  <Stack.Navigator screenOptions={{ header: () => <FixedHeader /> }}>
-    <Stack.Screen name="BnsDashboard" component={BnsDashboardScreen} />
-    <Stack.Screen
-      name="ChildHealthRecords"
-      component={ChildHealthRecordsScreen}
-    />
-    <Stack.Screen name="BnsAppointment" component={BnsAppointmentScreen} />
-    <Stack.Screen name="BnsInventory" component={BnsInventoryScreen} />
-    <Stack.Screen name="BnsReports" component={BnsReportsScreen} />
-    <Stack.Screen
-      name="BnsViewReport"
-      component={BnsViewReportScreen}
-      options={{ headerShown: false }}
-    />
-  </Stack.Navigator>
+  <View style={{ flex: 1 }}>
+    <Stack.Navigator screenOptions={{ header: () => <FixedHeader /> }}>
+      <Stack.Screen name="BnsDashboard" component={BnsDashboardScreen} />
+      <Stack.Screen name="ChildHealthRecords" component={ChildHealthRecordsScreen} />
+      <Stack.Screen name="BnsAppointment" component={BnsAppointmentScreen} />
+      <Stack.Screen name="BnsInventory" component={BnsInventoryScreen} />
+      <Stack.Screen name="BnsReports" component={BnsReportsScreen} />
+      <Stack.Screen
+        name="BnsViewReport"
+        component={BnsViewReportScreen}
+        options={{ headerShown: false }}
+      />
+    </Stack.Navigator>
+    <FloatingChatIcon />
+  </View>
 );
 
 // --- NEW: A separate Tab Navigator for the Maternal User ---
@@ -327,10 +329,19 @@ function MainApp() {
 
   const renderMainComponent = () => {
     if (profile?.role === "USER/MOTHER/GUARDIAN") {
-      // CHANGED: Render the UserStack instead of UserTabs directly
-      return <UserStack />;
+      return (
+        <View style={{ flex: 1 }}>
+          <UserStack />
+          <FloatingChatIcon />
+        </View>
+      );
     }
-    return <WorkerTabs />;
+    return (
+      <View style={{ flex: 1 }}>
+        <WorkerTabs />
+        <FloatingChatIcon />
+      </View>
+    );
   };
 
   return <HeaderProvider>{renderMainComponent()}</HeaderProvider>;
