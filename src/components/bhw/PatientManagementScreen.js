@@ -70,7 +70,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
                 {"< Prev"}
                 </Text>
             </TouchableOpacity>
-            <Text style={styles.paginationText}>{`${currentPage} / ${totalPages}`}</Text>
+            <Text style={styles.paginationText}>{`Page ${currentPage} of ${totalPages}`}</Text>
             <TouchableOpacity onPress={() => onPageChange(currentPage + 1)} disabled={currentPage === totalPages}>
                 <Text style={[styles.paginationText, currentPage === totalPages && styles.disabledText]}>{"Next >"}
                 </Text>

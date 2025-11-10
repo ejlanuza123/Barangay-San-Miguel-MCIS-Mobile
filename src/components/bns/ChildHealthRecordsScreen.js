@@ -278,7 +278,7 @@ export default function ChildHealthRecordsScreen({ route, navigation }) {
 
             <View style={styles.container}>
                 <View style={styles.mainCard}>
-                    <Text style={styles.cardTitle}>Patient List</Text>
+                    <Text style={styles.cardTitle}>Children List</Text>
                     <View style={styles.listHeader}>
                         <Text style={[styles.headerText, styles.idColumn]}>ID</Text>
                         <Text style={[styles.headerText, styles.nameColumn]}>Name</Text>

@@ -135,15 +135,20 @@ export default function FixedHeader() {
 
   const [isNotifModalOpen, setIsNotifModalOpen] = useState(false);
 
+  // In src\components\layout\FixedHeader.js
+
   const getHeaderStyle = () => {
     switch (profile?.role) {
       case 'BNS':
-        return { backgroundColor: '#dcfce7', userNameColor: '#166534' };
+        // Changed from #dcfce7 to #bbf7d0 (Darker Green)
+        return { backgroundColor: '#bbf7d0', userNameColor: '#166534' };
       case 'USER/MOTHER/GUARDIAN':
-        return { backgroundColor: '#fce7f3', userNameColor: '#9d174d' };
+        // Changed from #fce7f3 to #fbcfe8 (Darker Pink)
+        return { backgroundColor: '#fbcfe8', userNameColor: '#9d174d' };
       case 'BHW':
       default:
-        return { backgroundColor: '#dbeafe', userNameColor: '#1e3a8a' };
+        // Changed from #dbeafe to #bfdbfe (Darker Blue)
+        return { backgroundColor: '#bfdbfe', userNameColor: '#1e3a8a' };
     }
   };
 

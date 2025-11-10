@@ -108,7 +108,7 @@ export default function AboutScreen({ navigation }) {
             />
           </LinearGradient>
           <Text style={styles.appName}>San Miguel MCIS Mobile</Text>
-          <Text style={styles.appVersion}>Version 1.0.1</Text>
+          <Text style={styles.appVersion}>Version 1.0.2</Text>
           <View style={styles.divider} />
           <Text style={[styles.appTagline, { color: colors.primary }]}>
             Empowering Community Healthcare Through Technology
