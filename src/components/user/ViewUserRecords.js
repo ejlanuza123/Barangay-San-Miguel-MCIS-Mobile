@@ -55,7 +55,22 @@ const HistoryList = ({ title, items }) => (
 
 // --- Tab Scene Components ---
 
-const ProfileScene = ({ record }) => (
+const ProfileScene = ({ record }) => {
+    const medicalHistory = record.medical_history || {};
+    const combinedData = {
+        ...record,
+        ...medicalHistory
+    };
+    console.log('Obstetrical Score Data:', {
+        g_score: combinedData.g_score,
+        p_score: combinedData.p_score,
+        term: combinedData.term,
+        preterm: combinedData.preterm,
+        abortion: combinedData.abortion,
+        living_children: combinedData.living_children,
+        fullRecord: record
+    });
+    return (
     <ScrollView contentContainerStyle={styles.sceneContent}>
         <View style={styles.profileHeader}>
             <View style={styles.qrContainer}>
@@ -90,19 +105,56 @@ const ProfileScene = ({ record }) => (
             <Field label="NHTS No." value={record?.medical_history?.nhts_no} />
         </Section>
         
-        <Section title="Obstetrical Score">
-            {/* These fields are inside medical_history */}
+       <Section title="Obstetrical Score" style={styles.obSection}>
             <View style={styles.obScoreGrid}>
-                <Field label="G" value={record?.medical_history?.g_score} />
-                <Field label="P" value={record?.medical_history?.p_score} />
-                <Field label="T" value={record?.medical_history?.term} />
-                <Field label="P" value={record?.medical_history?.preterm} />
-                <Field label="A" value={record?.medical_history?.abortion} />
-                <Field label="L" value={record?.medical_history?.living_children} />
+                <View style={[styles.obScoreItem, styles.obScoreItemPrimary]}>
+                    <Text style={styles.obScoreLabel}>Gravida</Text>
+                    <Text style={styles.obScoreValue}>{combinedData.g_score || '0'}</Text>
+                    <Text style={styles.obScoreDescription}>Total Pregnancies</Text>
+                </View>
+                <View style={[styles.obScoreItem, styles.obScoreItemPrimary]}>
+                    <Text style={styles.obScoreLabel}>Para</Text>
+                    <Text style={styles.obScoreValue}>{combinedData.p_score || '0'}</Text>
+                    <Text style={styles.obScoreDescription}>Total Births</Text>
+                </View>
+                <View style={styles.obScoreItem}>
+                    <View style={styles.obScoreIcon}>
+                        <Text style={styles.obScoreIconText}>T</Text>
+                    </View>
+                    <Text style={styles.obScoreValue}>{combinedData.term || '0'}</Text>
+                    <Text style={styles.obScoreSubLabel}>Term</Text>
+                </View>
+                <View style={styles.obScoreItem}>
+                    <View style={styles.obScoreIcon}>
+                        <Text style={styles.obScoreIconText}>P</Text>
+                    </View>
+                    <Text style={styles.obScoreValue}>{combinedData.preterm || '0'}</Text>
+                    <Text style={styles.obScoreSubLabel}>Preterm</Text>
+                </View>
+                <View style={styles.obScoreItem}>
+                    <View style={styles.obScoreIcon}>
+                        <Text style={styles.obScoreIconText}>A</Text>
+                    </View>
+                    <Text style={styles.obScoreValue}>{combinedData.abortion || '0'}</Text>
+                    <Text style={styles.obScoreSubLabel}>Abortion</Text>
+                </View>
+                <View style={styles.obScoreItem}>
+                    <View style={styles.obScoreIcon}>
+                        <Text style={styles.obScoreIconText}>L</Text>
+                    </View>
+                    <Text style={styles.obScoreValue}>{combinedData.living_children || '0'}</Text>
+                    <Text style={styles.obScoreSubLabel}>Living</Text>
+                </View>
+            </View>
+            <View style={styles.obScoreSummary}>
+                <Text style={styles.obScoreSummaryText}>
+                    G{combinedData.g_score || '0'} P{combinedData.p_score || '0'} (T{combinedData.term || '0'}-P{combinedData.preterm || '0'}-A{combinedData.abortion || '0'}-L{combinedData.living_children || '0'})
+                </Text>
             </View>
         </Section>
     </ScrollView>
-);
+    );
+};
 
 const PregnancyHistoryTable = ({ history }) => {
     const gravidas = useMemo(() => Array.from({ length: 10 }, (_, i) => i + 1), []);
@@ -344,17 +396,25 @@ export default function ViewUserRecords() {
             return <ActivityIndicator size="large" color="#c026d3" style={{ marginTop: 50 }} />;
         }
         if (!record) {
-             return <View style={styles.centered}><Text>No record found.</Text></View>;
+            return <View style={styles.centered}><Text>No record found.</Text></View>;
         }
+        
+        // Combine patient data with medical_history like the BHW component does
+        const medicalHistory = record.medical_history || {};
+        const combinedData = {
+            ...record,
+            ...medicalHistory  // This spreads medical_history fields to top level
+        };
+        
         switch (route.key) {
             case 'profile':
-                return <ProfileScene record={record} />;
+                return <ProfileScene record={combinedData} />;
             case 'pregnancy':
-                return <PregnancyScene record={record} />;
+                return <PregnancyScene record={combinedData} />;
             case 'medical':
-                return <MedicalScene record={record} />;
+                return <MedicalScene record={combinedData} />;
             case 'treatments':
-                return <TreatmentScene record={record} />;
+                return <TreatmentScene record={combinedData} />;
             default:
                 return null;
         }
@@ -408,8 +468,93 @@ const styles = StyleSheet.create({
     fieldLabel: { color: '#6b7280', fontSize: 14, flex: 1 },
     fieldValue: { fontWeight: 'bold', color: '#374151', fontSize: 14, flex: 1.5, textAlign: 'right' },
 
-    obScoreGrid: { flexDirection: 'row', justifyContent: 'space-around' },
-    
+    obSection: {
+        backgroundColor: '#faf5ff',
+        borderColor: '#e9d5ff',
+    },
+    obScoreGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+        gap: 12,
+    },
+    obScoreItem: {
+        width: '30%',
+        alignItems: 'center',
+        padding: 16,
+        backgroundColor: 'white',
+        borderRadius: 16,
+        borderWidth: 2,
+        borderColor: '#f3e8ff',
+        shadowColor: '#c084fc',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 3,
+    },
+    obScoreItemPrimary: {
+        backgroundColor: '#f3e8ff',
+        borderColor: '#c084fc',
+        borderWidth: 2,
+        transform: [{ scale: 1.05 }],
+    },
+    obScoreLabel: {
+        fontSize: 10,
+        fontWeight: '700',
+        color: '#7e22ce',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+        marginBottom: 8,
+    },
+    obScoreValue: {
+        fontSize: 28,
+        fontWeight: '800',
+        color: '#7e22ce',
+        marginBottom: 4,
+    },
+    obScoreDescription: {
+        fontSize: 10,
+        color: '#a855f7',
+        textAlign: 'center',
+        fontWeight: '600',
+    },
+    obScoreSubLabel: {
+        fontSize: 10,
+        color: '#6b7280',
+        fontWeight: '600',
+        marginTop: 4,
+    },
+    obScoreIcon: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: '#e9d5ff',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 8,
+        borderWidth: 2,
+        borderColor: '#c084fc',
+    },
+    obScoreIconText: {
+        fontSize: 14,
+        fontWeight: '800',
+        color: '#7e22ce',
+    },
+    obScoreSummary: {
+        marginTop: 16,
+        padding: 12,
+        backgroundColor: '#f3e8ff',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#d8b4fe',
+    },
+    obScoreSummaryText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#7e22ce',
+        textAlign: 'center',
+        fontFamily: 'monospace',
+    },
     historyItem: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 5 },
     historyText: { fontSize: 14, color: '#374151', flex: 1 },
     historyValue: { fontSize: 14, fontWeight: 'bold', flex: 0.5, textAlign: 'right' },
