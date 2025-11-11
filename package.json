@@ -1,6 +1,6 @@
 {
   "name": "sanmiguelmcis_mobile",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "main": "index.js",
   "scripts": {
     "start": "expo start",
@@ -33,6 +33,7 @@
     "react-dom": "19.1.0",
     "react-native": "0.81.5",
     "react-native-gesture-handler": "~2.28.0",
+    "react-native-markdown-display": "^7.0.2",
     "react-native-pager-view": "^6.9.1",
     "react-native-qrcode-svg": "^6.3.15",
     "react-native-reanimated": "~4.1.0",

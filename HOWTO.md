@@ -16,3 +16,6 @@
 1. npx expo-doctor
 2. ./gradlew doctor
 3. npx expo install --check
+
+### error handling
+1. 
