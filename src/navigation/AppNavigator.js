@@ -98,7 +98,7 @@ const getRoleColors = (role) => {
   if (role === "BNS") {
     return {
       primary: "#6ee7b7", // Very Light Emerald Green
-      dark: "#34d399", // Very Light Dark Emerald
+      dark: "#25966bff", // Very Light Dark Emerald
       light: "#a7f3d0", // Very Light Emerald
       headerGradient: ["#6ee7b7", "#34d399"],
       iconFill: "#34d399",
@@ -111,7 +111,7 @@ const getRoleColors = (role) => {
   if (role === "USER/MOTHER/GUARDIAN") {
     return {
       primary: "#f9a8d4", // Very Light Rose Pink
-      dark: "#f472b6", // Very Light Dark Rose
+      dark: "#ae4079ff", // Very Light Dark Rose
       light: "#fce7f3", // Very Light Pink
       headerGradient: ["#f9a8d4", "#f472b6"],
       iconFill: "#f472b6",
@@ -123,7 +123,7 @@ const getRoleColors = (role) => {
   // Default BHW (Very Light Blue)
   return {
     primary: "#93c5fd", // Very Light Blue
-    dark: "#60a5fa", // Very Light Dark Blue
+    dark: "#2e5f9cff", // Very Light Dark Blue
     light: "#dbeafe", // Very Light Blue
     headerGradient: ["#93c5fd", "#60a5fa"],
     iconFill: "#60a5fa",
@@ -238,13 +238,13 @@ const WorkerTabs = () => {
           tabBarShowLabel: false,
           tabBarStyle: {
             position: "absolute",
-            bottom: 15,
+            bottom: 0,
             left: 20,
             right: 20,
             elevation: 5,
-            backgroundColor: "white",
+            backgroundColor: roleColors.light,
             borderRadius: 15,
-            height: 60,
+            height: 75,
             borderTopWidth: 0,
           },
           tabBarIcon: ({ color }) => {
