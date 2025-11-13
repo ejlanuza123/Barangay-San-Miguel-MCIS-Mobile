@@ -98,8 +98,8 @@ const getRoleColors = (role) => {
   if (role === "BNS") {
     return {
       primary: "#6ee7b7", // Very Light Emerald Green
-      dark: "#25966bff", // Very Light Dark Emerald
-      light: "#a7f3d0", // Very Light Emerald
+      dark: "#228b63ff", // Very Light Dark Emerald
+      light: "#8ffbd0ff", // Very Light Emerald
       headerGradient: ["#6ee7b7", "#34d399"],
       iconFill: "#34d399",
       iconBg: "#ecfdf5",
@@ -111,8 +111,8 @@ const getRoleColors = (role) => {
   if (role === "USER/MOTHER/GUARDIAN") {
     return {
       primary: "#f9a8d4", // Very Light Rose Pink
-      dark: "#ae4079ff", // Very Light Dark Rose
-      light: "#fce7f3", // Very Light Pink
+      dark: "#953667ff", // Very Light Dark Rose
+      light: "#f7bfdeff", // Very Light Pink
       headerGradient: ["#f9a8d4", "#f472b6"],
       iconFill: "#f472b6",
       iconBg: "#fdf2f8",
@@ -123,8 +123,8 @@ const getRoleColors = (role) => {
   // Default BHW (Very Light Blue)
   return {
     primary: "#93c5fd", // Very Light Blue
-    dark: "#2e5f9cff", // Very Light Dark Blue
-    light: "#dbeafe", // Very Light Blue
+    dark: "#335e93ff", // Very Light Dark Blue
+    light: "#a7cefbff", // Very Light Blue
     headerGradient: ["#93c5fd", "#60a5fa"],
     iconFill: "#60a5fa",
     iconBg: "#f0f9ff",
